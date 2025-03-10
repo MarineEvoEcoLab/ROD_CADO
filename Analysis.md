@@ -3,11 +3,23 @@ Home for analysis steps and notes for ROD CADO project
 
 Author: PLOMEE 
 
-Last edited: 20250227
+Last edited: 20250310 MG 
 
-Data uploaded & analyzed on KITT. User logged in via ssh before following steps were completed. 
+**TABLE OF CONTENTS**
+1. [Set up](#1-set-up)
+2. [QC on raw reads](#2-quality-check-of-raw-reads-with-fastqc-and-multiqc)
+3. [Quality trimming & filtering](#3-trimming-and-filtering)
+4. [QC on clean reads](#4-quality-check-of-clean-reads-with-fastqc-and-multiqc)
+5. []()
+6. []()
+7. []()
+8. []()
 
-## Set up
+
+
+## 1. Set up
+Data uploaded & analyzed on KITT. User logged in via ssh before following steps were completed.
+
 ### Working directory
 ```
 /home/Shared_Data/ROD_CADO/
@@ -82,19 +94,13 @@ conda env create -f ROD_CADO.yml
 conda env list
 
 #move into our new conda env
-conda activate ROD_CADO
-
-#once successfully in the env, (base) will change to (ROD_CADO)
-
-#leave conda env
-conda deactivate
+conda activate ROD_CADO   #once successfully in the env, (base) will change to (ROD_CADO)
 ```
 
-### Github repository
-fill me in :) 
+### Github repository at [MarineEvoEcoLab/ROD_CADO](https://github.com/MarineEvoEcoLab/ROD_CADO)
 
 
-## Quality check with fastqc and multiqc
+## 2. Quality check of raw reads with fastqc and multiqc
 FastQC is a program designed to visualize the quality of high throughput sequencing datasets. The report will highlight any areas where the data looks unusual or unreliable. 
 ```
 mkdir rawreads_fastqc_results/
@@ -191,3 +197,34 @@ Ran multiqc to generate a readable report to investigate the quality of the sequ
 cd rawreads_fastqc_results
 multiqc .
 ```
+
+The multiqc command generates `multiqc_data` directory and `multiqc_report.html`. The .html report file can be transferred to local computer or to github and visualized on a web browser. 
+
+### Reviewing multiqc report
+
+Upon first look at the multiqc report there appeared to be some potential issues with the way a couple of files were concatonated leading to uneven sequence counts between fwd and rev (which we could expect to share similar read counts). JMG re-concatonated `R1_12.R ` and MEG reconcatonated both `CH2_12.F` and `CH2_12.R`. Then fastqc analysis was rerun on those samples and a new multiqc report was generated called `2_rawreads_multiqc_report.html`. This resolved differences in sequence lengths/duplication % between fwd/rev reads.
+
+#### Quality Score per base
+Overall, there is high quality across the samples and along the read lengths with a slight drop in quality at the beginning and end of the reads. C1_6.R had lower quality scores across the read.
+![quality_score_per_base](images/fastqc_per_base_sequence_quality_plot-2.png)
+
+#### Per base sequence content
+Here, we can see that there is a bit of noise in the first ~10bp of the read. This pattern was common across most all of the samples. We'll trim off the first 10bp of all of the reads before moving forward with analyses.
+![per-base-seq-content](images/per-base-seq-content.png)
+
+#### Overrepresented sequences sample summary 
+C1_6.R (which was the sample with lower quality scores than the rest) had the highest % of top overrepresented sequence. 
+![over-rep-seqs](images/fastqc_overrepresented_sequences_plot.png)
+
+
+## 3. Trimming and filtering
+
+## 4. Quality check of clean reads with fastqc and multiqc
+
+
+
+#### Next steps chatter from 20250305
+- review new multiqc report
+- trim the beginning noise from first 10 bp of reads (see plot)
+- Can use fastp to trim data "manually" or you can run it through dDocent to trim reads
+- re-run quality check
