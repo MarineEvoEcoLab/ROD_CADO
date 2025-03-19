@@ -3,7 +3,7 @@ Home for analysis steps and notes for ROD CADO project
 
 Author: PLOMEE 
 
-Last edited: 20250310 MG 
+Last edited: 20250319 MG 
 
 **TABLE OF CONTENTS**
 1. [Set up](#1-set-up)
@@ -111,13 +111,18 @@ fastqc -o /home/Shared_Data/ROD_CADO/raw_seq/rawreads_fastqc_results/../*R.fq.gz
 
 **Since this takes a while, we used *tmux***
 tmux is beneficial to be able to disconnect from terminal and not disrupt fastqc. See general tmux syntax below.
+
+**[Easy Guide to tmux](https://hamvocke.com/blog/a-quick-and-easy-guide-to-tmux/)**
+
 ```
 #create a new session and run desired command
 tmux new -s my_session
 your_command
 
 #to detach from the session
-Ctrl + b, then d
+Ctrl + b, then d 
+##or type
+tmux detach
 
 #list tmux sessions
 tmux ls
@@ -209,15 +214,50 @@ Overall, there is high quality across the samples and along the read lengths wit
 ![quality_score_per_base](images/fastqc_per_base_sequence_quality_plot-2.png)
 
 #### Per base sequence content
-Here, we can see that there is a bit of noise in the first ~10bp of the read. This pattern was common across most all of the samples. We'll trim off the first 10bp of all of the reads before moving forward with analyses.
+Here, we can see that there is a bit of noise in the first ~10bp of the read. This pattern was common across most all of the samples. This is really normal as the sequencer settles in and error checking ramps up in the initial part of the read. We'll trim off the first 10bp of all of the reads before moving forward with analyses.
 ![per-base-seq-content](images/per-base-seq-content.png)
 
 #### Overrepresented sequences sample summary 
-C1_6.R (which was the sample with lower quality scores than the rest) had the highest % of top overrepresented sequence. 
+C1_6.R (which was the sample with lower quality scores than the rest) had the highest % of top overrepresented sequence. Still looks overall really good.
 ![over-rep-seqs](images/fastqc_overrepresented_sequences_plot.png)
 
 
 ## 3. Trimming and filtering
+Trimming with dDocent vs. trimming outside of dDocent. Since data looks relatively good and we don't have any nonstandard concerns, we can proceed with trimming in dDocent just to make it as straightforward as possible. 
+Instead of running everything all at once (as we did below), we can also run one step at a time and check results after each step!
+
+**[dDocent website](https://ddocent.com) with more info!**
+
+```
+cd Shared_Data/ROD_CADO
+conda activate ROD_CADO
+mkdir analysis
+cd analysis
+ln -s ../dDocent_ngs .  #link dDocent file into this new analysis directory
+ln -s ../raw_seq/*.fq.gz #link raw seq files into analysis directory
+ln -s ~/eager_obj1b/Genome/masked.* refernce.fasta #link new haplotig masked genome into directory and name it reference.fasta (from JMG previous directory)
+#nano config.file #dDocent always needs a `config.file` to run with instructions on how to complete the run -OR- you can do interactive prompts (we did interactive prompts) 
+./dDocent_ngs
+
+# prompts below come up
+processors: 48
+trim?: yes
+perform assembly?: yno
+map reads? yes
+new parameters for BWA? no 
+call SNPS? yes
+enter email # this will run a while!
+ctrl+z 
+bg
+disown -h 
+top #shows you programs running currently - press q to leave
+tail temp.LOG #shows you progress of read trimming
+```
+
+
+
+
+
 
 ## 4. Quality check of clean reads with fastqc and multiqc
 
