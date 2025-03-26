@@ -8,8 +8,8 @@ Last edited: 20250319 MG
 **TABLE OF CONTENTS**
 1. [Set up](#1-set-up)
 2. [QC on raw reads](#2-quality-check-of-raw-reads-with-fastqc-and-multiqc)
-3. [Quality trimming & filtering](#3-trimming-and-filtering)
-4. [QC on clean reads](#4-quality-check-of-clean-reads-with-fastqc-and-multiqc)
+3. [Quality trimming, mapping & filtering](#3-trimming-mapping-and-filtering)
+4. []()
 5. []()
 6. []()
 7. []()
@@ -222,9 +222,8 @@ C1_6.R (which was the sample with lower quality scores than the rest) had the hi
 ![over-rep-seqs](images/fastqc_overrepresented_sequences_plot.png)
 
 
-## 3. Trimming and filtering
+## 3. Trimming, mapping and filtering
 Trimming with dDocent vs. trimming outside of dDocent. Since data looks relatively good and we don't have any nonstandard concerns, we can proceed with trimming in dDocent just to make it as straightforward as possible. 
-Instead of running everything all at once (as we did below), we can also run one step at a time and check results after each step!
 
 **[dDocent website](https://ddocent.com) with more info!**
 
@@ -242,10 +241,10 @@ ln -s ~/eager_obj1b/Genome/masked.* refernce.fasta #link new haplotig masked gen
 # prompts below come up
 processors: 48
 trim?: yes
-perform assembly?: yno
+perform assembly?: no
 map reads? yes
 new parameters for BWA? no 
-call SNPS? yes
+call SNPS? no
 enter email # this will run a while!
 ctrl+z 
 bg
@@ -253,18 +252,63 @@ disown -h
 top #shows you programs running currently - press q to leave
 tail temp.LOG #shows you progress of read trimming
 ```
+dDocent was set to trim (take off bad basepairs) and map with default `bwa mem` parameters. Mapped reads were then marked for duplicated with `picard` then `samtools` was used to filter out duplicated and select for reads with a mapping quality above 10
 
+**This will run a while...**
 
+Following dDocent run, each sample will have the following files:
+![trimming-mapping-files](images/trimming-mapping-output-files.png)
 
+output file explanation
+```
+.F.fq.gz and .R.fq.gz #original sequence files
+.R1.fq.gz #trimmed read (fwd)
+.R2.fq.gz #trimmed read (rev)
+.RGmg.bam #mapped reads to the genome
+.F.bam #filtered, mapped reads 
+```
 
+### After trimming and mapping are done, we can look at optimizing mapping with `samtools`. 
+Take a look at how mapping went with default parameters then we can run mapping with different parameters on a few samples to explore the data a bit more. 
 
+`samtools` helps us look at BAM files. Can check a couple samples to see what the difference is between filtered and unfiltered reads or different mapping parameters.
 
-## 4. Quality check of clean reads with fastqc and multiqc
+```
+conda activate ROD_CADO
+ls *.bam 
+samtools #shows you everything samtools can do
+```
 
+**`samtools` report exploring unfiltered mapped reads**
+```
+samtools flagstats -@16 C1-2RGmd.bam # changing the threads with -@16 to make things run faster
+#shows number of total reads (f + R), number of primary reads (without PCR dups), number of duplicates, % of reads mapped (ex. anything over 85-90% is good particularly for unfiltered reads), % of primary reads mapped, % of properly paired reads (% of reads and mate mapped within expected distrubution along the contig), singletons (either F or R mapped but not both), and number of reads with a mate mapped to a diff. chr
+```
+example from unfiltered mapped reads
+![unfiltered-samtools-report](images/unf-bam-samtools-report.png)
 
+**`samtools` report exploring filtered mapped reads**
+```
+samtools flagstats -@16 C1-2.F.bam # changing the threads with -@16 to make things run faster
+```
+example from filtered mapped reads
+![filtered-samtools-report](images/filt-bam-samtools-report.png)
 
-#### Next steps chatter from 20250305
-- review new multiqc report
-- trim the beginning noise from first 10 bp of reads (see plot)
-- Can use fastp to trim data "manually" or you can run it through dDocent to trim reads
-- re-run quality check
+### Re-run mapping with different parameters on a small subset of files
+```
+ll -S *F.bam | head #head the first couple of largest bam files 
+cd map_opt/ 
+#link in some of these big files to optimize mapping 
+
+./dDocent_ngs
+#mapping reads in docent again with the following parameters
+#-A (match score) = 1
+#-B (mismatch score) = 3
+#-O (gap penalty) = 5 
+
+#no to calling snps
+```
+
+**This will also take a while...**
+
+Once these new parameters are done running, we can compare `samtools flagstats` results between default and new mapping parameters. 
