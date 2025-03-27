@@ -312,3 +312,72 @@ cd map_opt/
 **This will also take a while...**
 
 Once these new parameters are done running, we can compare `samtools flagstats` results between default and new mapping parameters. 
+
+## Samtools flagstat comparison for map_opt files and the original run
+
+### Run in map_opt directory
+
+```bash
+samtools flagstat -@16 C2_4.F.bam > C2_4.F.flagstats.txt
+samtools flagstat -@16 C3_5.F.bam > C3_5.F.flagstats.txt
+samtools flagstat -@16 CH2_9.F.bam > CH2_9.F.flagstats.txt
+samtools flagstat -@16 R2_5.F.bam > R2_5.F.flagstats.txt
+```
+### Run in analysis directory
+
+```bash
+samtools flagstat -@16 C2_4.F.bam > C2_4.F.flagstats.txt
+samtools flagstat -@16 C3_5.F.bam > C3_5.F.flagstats.txt
+samtools flagstat -@16 CH2_9.F.bam > CH2_9.F.flagstats.txt
+samtools flagstat -@16 R2_5.F.bam > R2_5.F.flagstats.txt
+```
+
+### C2_4 analysis flagstat results
+
+130874804 + 0 in total (QC-passed reads + QC-failed reads)
+130874804 + 0 primary
+0 + 0 secondary
+0 + 0 supplementary
+0 + 0 duplicates
+0 + 0 primary duplicates
+130874804 + 0 mapped (100.00% : N/A)
+130874804 + 0 primary mapped (100.00% : N/A)
+130874804 + 0 paired in sequencing
+65481079 + 0 read1
+65393725 + 0 read2
+122192333 + 0 properly paired (93.37% : N/A)
+130343292 + 0 with itself and mate mapped
+531512 + 0 singletons (0.41% : N/A)
+4895513 + 0 with mate mapped to a different chr
+4895513 + 0 with mate mapped to a different chr (mapQ>=5)
+
+### C2_4 map_opt flagstat results
+
+132136896 + 0 in total (QC-passed reads + QC-failed reads)
+132136896 + 0 primary
+0 + 0 secondary
+0 + 0 supplementary
+0 + 0 duplicates
+0 + 0 primary duplicates
+132136896 + 0 mapped (100.00% : N/A)
+132136896 + 0 primary mapped (100.00% : N/A)
+132136896 + 0 paired in sequencing
+66094758 + 0 read1
+66042138 + 0 read2
+123768066 + 0 properly paired (93.67% : N/A)
+131658332 + 0 with itself and mate mapped
+478564 + 0 singletons (0.36% : N/A)
+4782602 + 0 with mate mapped to a different chr
+4782602 + 0 with mate mapped to a different chr (mapQ>=5)
+
+### Results
+
+We have decided to re-run mapping and start VCF calling for our 80 files. Will first do a dDocent mapping run, analyze the output, and if all looks good move onto VCF calling. 
+
+## dDocent with altered mapping stats
+
+For mapping used bwa options for -A 1 -B 3 -O 5
+```bash
+# In /home/Shared_Data/ROD_CADO/analysis run
+./dDocent_ngs
+```
