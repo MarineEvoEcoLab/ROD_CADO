@@ -394,6 +394,12 @@ paste <(samtools flagstat -@16 $i.F.bam) <(samtools flagstat -@16 $i.F.bam)
 done | column -t > mapping.stats
 ```
 
+Use `grep` to look at mapping stats for specific samples 
+
+```bash
+grep -A 6 "C2_4" mapping.stats
+```
+
 Overall our new mapping parameters improved the number of reads in our RGmd.bam files and subsequent F.bam files. Will proceed with VCF calling
 
 ## VCF calling using dDocent
@@ -402,3 +408,6 @@ Overall our new mapping parameters improved the number of reads in our RGmd.bam 
 # run dDocent with only options to do VCF calling
 ./dDocent_ngs
 ```
+
+Start thinking about variant filtering following variant calling with guidance from the following template:
+[pipeline for processing short read data](https://www.protocols.io/view/a-standard-pipeline-for-processing-short-read-sequ-dm6gp3m21vzp/v3?step=10)
