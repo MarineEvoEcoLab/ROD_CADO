@@ -381,3 +381,24 @@ For mapping used bwa options for -A 1 -B 3 -O 5
 # In /home/Shared_Data/ROD_CADO/analysis run
 ./dDocent_ngs
 ```
+
+## Analyzing RGmd.bam and F.bam files
+
+```bash
+for i in `cat namelist`
+do
+echo $i
+paste <(samtools flagstat -@16 $i-RGmd.bam) <(samtools flagstat -@16 $i-RGmd.bam)
+echo $i "filtered"
+paste <(samtools flagstat -@16 $i.F.bam) <(samtools flagstat -@16 $i.F.bam)
+done | column -t > mapping.stats
+```
+
+Overall our new mapping parameters improved the number of reads in our RGmd.bam files and subsequent F.bam files. Will proceed with VCF calling
+
+## VCF calling using dDocent
+
+```bash
+# run dDocent with only options to do VCF calling
+./dDocent_ngs
+```
