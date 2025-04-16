@@ -402,7 +402,7 @@ grep -A 6 "C2_4" mapping.stats
 
 Overall our new mapping parameters improved the number of reads in our RGmd.bam files and subsequent F.bam files. Will proceed with VCF calling
 
-## VCF calling using dDocent
+## 4. VCF calling using dDocent & filtering
 
 ```bash
 # run dDocent with only options to do VCF calling
@@ -411,3 +411,21 @@ Overall our new mapping parameters improved the number of reads in our RGmd.bam 
 
 Start thinking about variant filtering following variant calling with guidance from the following template:
 [pipeline for processing short read data](https://www.protocols.io/view/a-standard-pipeline-for-processing-short-read-sequ-dm6gp3m21vzp/v3?step=10)
+
+### Filtering VCF files
+Jon filtered VCF files with a script. In raw.vcf/filtered/ directory 
+
+Even after filtering we had so many SNPs so we can be even more conservative in filtering. Original filtering script that Jon ran filtered for minimum depth of 5 for all genotypes. If they did not meet this threshold, it vcftools sets them as missing. 
+
+Re-running VCF filtering with more conservative threshold of min depth of 10
+```
+vcftools --gzvcf SNP.TRS.. --minDP 10 --max-missing 1.0 --recode-INFO-all --stdout SNP.TRS...FIL | bcftools view --threads 24 -O x -o SNP.TRS...vcf.gz
+#min depth of 10 per genotype and no missing data genotypes (and filtering out loci with missing data)
+#output as a compressed vcf (VCF tools default outputs uncompressed files)
+```
+
+## 5. PCA 
+We can use PCAdapt for first look at data. This first look will help us determine if we have any interesting patterns to explore further.
+We'll run this on the filtered vcf file
+
+[Tutorial on PCA](https://marineevoecolab.github.io/NACE_MAS_Genomics_Workshop/content/PCA.html)
