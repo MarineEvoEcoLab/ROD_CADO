@@ -9,8 +9,8 @@ Last edited: 20250319 MG
 1. [Set up](#1-set-up)
 2. [QC on raw reads](#2-quality-check-of-raw-reads-with-fastqc-and-multiqc)
 3. [Quality trimming, mapping & filtering](#3-trimming-mapping-and-filtering)
-4. []()
-5. []()
+4. [VCF calling using dDocent & filtering](#4-vcf-calling-using-ddocent-and-filtering)
+5. [PCA](#5-pca)
 6. []()
 7. []()
 8. []()
@@ -402,7 +402,7 @@ grep -A 6 "C2_4" mapping.stats
 
 Overall our new mapping parameters improved the number of reads in our RGmd.bam files and subsequent F.bam files. Will proceed with VCF calling
 
-## 4. VCF calling using dDocent & filtering
+## 4. VCF calling using dDocent and filtering
 
 ```bash
 # run dDocent with only options to do VCF calling
@@ -426,6 +426,8 @@ vcftools --gzvcf SNP.TRS.. --minDP 10 --max-missing 1.0 --recode-INFO-all --stdo
 
 ## 5. PCA 
 We can use PCAdapt for first look at data. This first look will help us determine if we have any interesting patterns to explore further.
-We'll run this on the filtered vcf file
+We'll run this on the filtered vcf file (/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf)
 
 [Tutorial on PCA](https://marineevoecolab.github.io/NACE_MAS_Genomics_Workshop/content/PCA.html)
+
+See pcadapt Rmd analysis [here]() - link to Jacob's Rmd!
