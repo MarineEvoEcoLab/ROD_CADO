@@ -25,8 +25,12 @@ library(vcfR)   # for reading VCF files
 library(dplyr)  # for data manipulation
 
 # Set paths
-vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf"
+vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz"
 output <- "~/ROD_CADO/Diversity_metrics/Heterozygosity_cc"  # directory to save results
+
+# Read VCF file
+vcf <- read.vcfR(vcf_path)
+
 
 
 
