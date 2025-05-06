@@ -21,8 +21,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Load requiered libraries
 
-
-
+library(vcfR)   # for reading VCF files
+library(dplyr)  # for data manipulation
 
 # Set paths
 vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf"
