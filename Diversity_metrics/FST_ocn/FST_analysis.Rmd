@@ -6,25 +6,45 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(root.dir = "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered")
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+#Load required packages
+library(vcfR)
+library(adegenet)
+library(hierfstat)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+# in terminal:
+# 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+#Set paths
+vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf"
+output <- "~/ROD_CADO/Diversity_metrics/FST_ocn"  # directory to save results
+```
+
+```{r}
+#Read vcf file
+vcf <- read.vcfR(vcf_path)
+```
+
+```{r}
+#Convert VCF to genind object (adegenet format)
+genind_obj <- vcfR2genind(vcf)
+```
+
+```{r}
+#Convert to hierfstat format
+hierfstat_obj <- genind2hierfstat(genind_obj)
+```
+
+```{r}
+#Calculate FST
+fst_results <- wc(hierfstat_obj)
+print(fst_results)
+```
+
