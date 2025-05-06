@@ -19,7 +19,13 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Load library and convert vcf to pcadapt format
+# Load requiered libraries
+
+
+
+# Set paths
+vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.sub1.vcf"
+output <- "~/ROD_CADO/Diversity_metrics/Heterozygosity_cc"  # directory to save results
 
 
 
