@@ -17,19 +17,12 @@ library(hierfstat)
 ```
 
 ```{r}
-# in terminal:
-# 
-```
-
-```{r}
 #Set paths
-vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf"
+vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz"
 output <- "~/ROD_CADO/Diversity_metrics/FST_ocn"  # directory to save results
-```
 
-```{r}
 #Read vcf file
-vcf <- read.vcfR(vcf_path)
+vcf <- read.vcfR("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz")
 ```
 
 ```{r}
