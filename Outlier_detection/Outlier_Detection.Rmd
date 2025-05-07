@@ -1,0 +1,19 @@
+---
+title: "ROD CADO Outlier Detection"
+output:
+  html_notebook:
+    fig_caption: yes
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    keep_md: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+

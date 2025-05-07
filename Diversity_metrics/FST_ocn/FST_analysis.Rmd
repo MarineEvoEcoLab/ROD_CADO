@@ -1,0 +1,50 @@
+---
+title: "FST"
+author: "Olivia Nieves"
+date: '2025-04-30'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(root.dir = "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered")
+```
+
+```{r}
+#Load required packages
+library(vcfR)
+library(adegenet)
+library(hierfstat)
+```
+
+```{r}
+# in terminal:
+# 
+```
+
+```{r}
+#Set paths
+vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf"
+output <- "~/ROD_CADO/Diversity_metrics/FST_ocn"  # directory to save results
+```
+
+```{r}
+#Read vcf file
+vcf <- read.vcfR(vcf_path)
+```
+
+```{r}
+#Convert VCF to genind object (adegenet format)
+genind_obj <- vcfR2genind(vcf)
+```
+
+```{r}
+#Convert to hierfstat format
+hierfstat_obj <- genind2hierfstat(genind_obj)
+```
+
+```{r}
+#Calculate FST
+fst_results <- wc(hierfstat_obj)
+print(fst_results)
+```
+
