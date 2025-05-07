@@ -1,0 +1,163 @@
+---
+title: "Genetic Diversity work"
+output:
+  html_notebook:
+    fig_caption: yes
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    keep_md: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, root_dir = "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered")
+```
+
+# Load libraries and file paths
+```{r, message=FALSE, warning=FALSE}
+library("plyr")
+library("dplyr")
+library("ggplot2")
+library(R.utils)
+library(gghighlight)
+library(ggman)
+library(ggtext)
+library(patchwork)
+library(plotrix)
+library(qqman)
+library(qvalue)
+library(reshape2)
+library(tidyr)
+library(zoo)
+library(infer)
+options(dplyr.summarise.inform = FALSE)
+library(bigsnpr)
+library("wesanderson")
+library("directlabels")
+library(OutFLANK)
+library(adegenet)
+library(poppr)
+library(vcfR)
+library(stringr)
+library(matrixStats)
+```
+
+
+# Nucleotide diversity
+
+Nucleotide diversity (often referred to using the symbol π) is the average pairwise difference between all possible pairs of individuals in your sample. It is a very intuitive and simple measure of genetic diversity, and is accurately estimated even with very few samples. A formal definition is here.
+
+We can obtain the nucleotide diversity (π) from our VCF file using vcftools software. In our case we will collect the π value from each 10 kb (10,000 bp) window of the genome.
+
+NB: vcftools is a very flexible tool for analying, manipulating VCF files. It can do many other wonderful things. The vcftools manual is on github here.
+
+## Start of modified workflow
+
+### Run VCF tools PI window
+```{bash eval = FALSE}
+#bcftools view --threads 20 -S SNP.TRSdp10g1.FIL.vcf | vcftools --vcf -  --window-pi 10000 --out ROD.CADO.all.pi
+vcftools --vcf SNP.TRSdp10g1.FIL.vcf --window-pi 10000 --out ROD.CADO.all.pi
+```
+
+### Load dataframe
+```{r, message=FALSE, warning=FALSE}
+pi.all.dataframe<-read.table("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/ROD.CADO.all.pi", sep="\t", header=T)
+```
+
+
+### Modify CHROM column in dataframe
+```{r, message=FALSE, warning=FALSE}
+pi.all.dataframe %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035780.1", "1")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035781.1", "2")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035782.1", "3")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035783.1", "4")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035784.1", "5")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035785.1", "6")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035786.1", "7")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035787.1", "8")) %>%
+  mutate(CHROM = str_replace(CHROM, "NC_035788.1", "9")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035789.1", "10"))  -> mydf
+mydf$CHROM <- as.factor(mydf$CHROM)
+```
+
+### Plot PI by chromosome
+```{r, message=FALSE, warning=FALSE}
+ggplot(mydf, aes(x=CHROM, y=PI,))+
+  geom_violin(aes(color=CHROM,fill=CHROM))+
+  geom_boxplot(aes(fill=CHROM), width=0.1,outlier.shape = 23, outlier.color = "black")+
+  stat_summary(fun=mean, geom="point", shape=23, size=2)+
+  scale_fill_brewer(palette = "Paired")+
+  theme_classic()
+```
+
+### Smaller visualizations
+```{r, message=FALSE, warning=FALSE}
+hist(mydf$PI,br=40)
+
+boxplot(mydf$PI, ylab="Nuc Diversity")
+```
+
+### Plot By position
+```{r, message=FALSE, warning=FALSE}
+ggplot(mydf, aes(x=BIN_START, y=PI, color=CHROM))+
+  geom_point()+
+  facet_wrap(~CHROM)+
+  theme_classic()
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Subset by chrom
+mydf.chr1 <- mydf[which(mydf$CHROM=="1"),]
+
+ggplot(mydf.chr1, aes(x=BIN_START, y=PI))+
+  geom_point()+
+  #geom_violin(aes(color=CHROM,fill=CHROM))+
+  #geom_boxplot(aes(fill=CHROM), width=0.1,outlier.shape = 23, outlier.color = "black")+
+  #stat_summary(fun=mean, geom="point", shape=23, size=2)+
+  scale_fill_brewer(palette = "Paired")+
+  facet_wrap(~CHROM)+
+  theme_classic()
+```
+
+```{r}
+# Create an empty list to store the plots
+plot_list <- list()
+
+# Loop through chromosomes 1 to 10
+for (i in 1:10) {
+  chr_data <- mydf[which(mydf$CHROM == as.character(i)), ]
+  
+  p <- ggplot(chr_data, aes(x = BIN_START, y = PI)) +
+    geom_point() +
+    theme_classic() +
+    ggtitle(paste("Chromosome", i))
+  
+  # Store the plot in the list
+  plot_list[[paste0("chr", i)]] <- p
+}
+
+# To display one of the plots, for example:
+print(plot_list[["chr2"]])
+
+```
+
+# Runs of homozygosity
+
+Runs of homozygosity (ROH) are contiguous lengths of homozygous genotypes that are present in an individual due to parents transmitting identical haplotypes to their offspring.
+
+The potential of predicting or estimating individual autozygosity for a subpopulation is the proportion of the autosomal genome above a specified length, termed Froh.
+
+This technique can be used to identify the genomic footprint of inbreeding in conservation programs, as organisms that have undergone recent inbreeding will exhibit long runs of homozygosity. The effect of inbreeding in the resulting sub-populations could be studied by measuring the runs of homozygosity in different individuals.
+
+## Start ROH workflow
+
+```{bash }
+vcftools --vcf SNP.TRSdp10g1.FIL.vcf --LROH --out ROD.CADO.all.LROH
+--LROH
+```
+
