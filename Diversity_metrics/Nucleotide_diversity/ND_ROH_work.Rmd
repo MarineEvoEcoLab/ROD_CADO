@@ -53,7 +53,7 @@ Nucleotide diversity (often referred to using the symbol π) is the average pair
 
 We can obtain the nucleotide diversity (π) from our VCF file using vcftools software. In our case we will collect the π value from each 10 kb (10,000 bp) window of the genome.
 
-NB: vcftools is a very flexible tool for analying, manipulating VCF files. It can do many other wonderful things. The vcftools manual is on github here.
+NB: vcftools is a very flexible tool for analyzing, manipulating VCF files. It can do many other wonderful things. The vcftools manual is on github here.
 
 ## Start of modified workflow
 
@@ -116,11 +116,6 @@ mydf.chr1 <- mydf[which(mydf$CHROM=="1"),]
 
 ggplot(mydf.chr1, aes(x=BIN_START, y=PI))+
   geom_point()+
-  #geom_violin(aes(color=CHROM,fill=CHROM))+
-  #geom_boxplot(aes(fill=CHROM), width=0.1,outlier.shape = 23, outlier.color = "black")+
-  #stat_summary(fun=mean, geom="point", shape=23, size=2)+
-  scale_fill_brewer(palette = "Paired")+
-  facet_wrap(~CHROM)+
   theme_classic()
 ```
 
@@ -142,7 +137,7 @@ for (i in 1:10) {
 }
 
 # To display one of the plots, for example:
-print(plot_list[["chr2"]])
+print(plot_list[["chr3"]])
 
 ```
 
@@ -158,6 +153,5 @@ This technique can be used to identify the genomic footprint of inbreeding in co
 
 ```{bash }
 vcftools --vcf SNP.TRSdp10g1.FIL.vcf --LROH --out ROD.CADO.all.LROH
---LROH
 ```
 
