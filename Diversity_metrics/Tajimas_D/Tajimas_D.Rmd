@@ -27,7 +27,6 @@ conda create -n vk python=3.8 numpy scipy
 conda activate vk
 pip install VCF-kit
 
-
 #set up files on github repo
 cd /home/mguidry/ROD_CADO/Diversity_metrics/
 mkdir Tajimas_D
@@ -41,65 +40,177 @@ ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf
 ```
 
 ## [VCF-kit `tajima`](https://vcf-kit.readthedocs.io/en/latest/tajima/ )
-Bins are useful for investigating particular areas of the genome that could be regions of interest. 
-Sliding windows are helpful for scanning the entire genome.
+We used bins for a quick look at treatment level differences in Tajima's D across the 4 treatments. 
 
 The following was run on the command line with tmux
 ```{bash}
-#calculated tajimas d in bins of 10,000 bp
-vk tajima 10000 10000 filtered.vcf.gz > 10kb_bin_td_filtered_vcf.tajima 
-
-#can also do a sliding window approach 
-vk tajima 100000 1000 filtered.vcf.gz > window_td_filtered_vcf.tajima
-
-#or a continuous sliding window approach to capture every unique bin of variants that fall within 100kb of one another
-##did not explore this yet as we are just looking for broad trends right now and have lots of data 
-#vk tajima 100000 --sliding filtered.vcf.gz > sliding_window_td_filtered_vcf.tajima
+# create popmap file with sample and treatment names
+mkdir popmap_files
+cd popmap_files
+cp /home/Shared_Data/ROD_CADO/analysis/popmap popmap
+#add in treatment names to popmap file (w/ code)
+head treat_popmap 
 ```
+C1_2    con-con
+C1_4    con-con
+C1_5    con-con
+C1_6    con-con
+C1_7    con-con
+C1_8    con-con
+C1_9    con-con
+C2_10   con-con
+C2_11   con-con
+C2_2    con-con
 
-## Assign reads to different treatments
-Need metadata to do this!
-
-Chat about which treatments to compare
-- 2 treatments (ROD vs control)
-- 4 treatemtns (stress-ROD, ambient-ROD, stress-control, ambient-control)
+Create treatment specific files containing a single column of all of the sample names within that treatment
 ```{bash}
+cd popmap_files
 
+awk '$2 == "con-con" {print $1}' treat_popmap > con-con.txt | awk '$2 == "str-con" {print $1}' treat_popmap > str-con.txt | awk '$2 == "con-rod" {print $1}' treat_popmap > con-rod.txt | awk '$2 == "str-rod" {print $1}' treat_popmap > str-rod.txt
 ```
 
+Subset the VCF by treatment and calculate tajimas D for each treatment
+```{bash}
+cd ..
+mkdir treat_tajima
+
+#subset vcf by treatment first then pipe to calculate tajima's D without having to write out a new vcf
+vcftools --gzvcf filtered.vcf.gz --keep popmap_files/con-con.txt --recode --recode-INFO-all --stdout | vk tajima 10000 10000 -> ./treat_tajima/con-con.tajima
+vcftools --gzvcf filtered.vcf.gz --keep popmap_files/str-con.txt --recode --recode-INFO-all --stdout | vk tajima 10000 10000 -> ./treat_tajima/str-con.tajima
+vcftools --gzvcf filtered.vcf.gz --keep popmap_files/con-rod.txt --recode --recode-INFO-all --stdout | vk tajima 10000 10000 -> ./treat_tajima/con-rod.tajima
+vcftools --gzvcf filtered.vcf.gz --keep popmap_files/str-rod.txt --recode --recode-INFO-all --stdout | vk tajima 10000 10000 -> ./treat_tajima/str-rod.tajima
+```
 
 ## Prep data for R
-```{r}
-#binned data (10,000 base bins)
-bin.td.df<-read.table(paste("10kb_bin_td_filtered_vcf.tajima", sep=""), sep="\t", header=T)
-summary(bin.td.df)
 
-#windowed data (100kb bins that slide 1000 bases each iterations)
-win.td.df<-read.table(paste("window_td_filtered_vcf.tajima", sep=""), sep="\t", header=T)
-summary(win.td.df)
+Add in a column to each .tajima file with the treatment name
+```{bash}
+#all treatments
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONCON"}' ./treat_tajima/con-con.tajima) <(mawk '{if (NR>1)print $0 "\tSTRCON"}' ./treat_tajima/str-con.tajima) <(mawk '{if (NR>1)print $0 "\tCONROD"}' ./treat_tajima/con-rod.tajima) <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_tajima/str-rod.tajima) > ./treat_tajima/treatment.tajima
+#con-con
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONCON"}' ./treat_tajima/con-con.tajima) > ./treat_tajima/con-con-treat.tajima
+#str-con
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRCON"}' ./treat_tajima/str-con.tajima) > ./treat_tajima/str-con-treat.tajima
+#con-rod
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONROD"}' ./treat_tajima/con-rod.tajima) > ./treat_tajima/con-rod-treat.tajima
+#str-rod
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_tajima/str-rod.tajima) > ./treat_tajima/str-rod-treat.tajima
 ```
 
-## Plot
 
-example ggplot from Jon's code
+Honestly not too sure what the desired output files are from here.
+https://bedtools.readthedocs.io/en/latest/content/tools/merge.html
+```{bash}
+#mkdir mean_treat_tajima
+
+cd treat_tajima 
+
+bedtools merge -i <(mawk '!/CHR/' con-con-treat.tajima | sort -k1,1 -k2,2n ) -c 4,5,6,7 -d -1 -o mean,mean,mean,first > ../mean_treat_tajima/mean.con-con.tajima
+bedtools merge -i <(mawk '!/CHR/' str-con-treat.tajima | sort -k1,1 -k2,2n ) -c 4,5,6,7 -d -1 -o mean,mean,mean,first > ../mean_treat_tajima/mean.str-con.tajima
+bedtools merge -i <(mawk '!/CHR/' con-rod-treat.tajima | sort -k1,1 -k2,2n ) -c 4,5,6,7 -d -1 -o mean,mean,mean,first > ../mean_treat_tajima/mean.con-rod.tajima
+bedtools merge -i <(mawk '!/CHR/' str-rod-treat.tajima | sort -k1,1 -k2,2n ) -c 4,5,6,7 -d -1 -o mean,mean,mean,first > ../mean_treat_tajima/mean.str-rod.tajima
+
+cd ../mean_treat_tajima/ 
+
+#writing out tables in .txt files with headers
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") mean.con-con.tajima mean.str-con.tajima mean.con-rod.tajima mean.str-rod.tajima > mean.treatment.tajima
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") mean.con-con.tajima > mean.con-con.tajima.txt
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") mean.str-con.tajima > mean.str-con.tajima.txt
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") mean.con-rod.tajima > mean.con-rod.tajima.txt
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tTAJD\tTREAT") mean.str-rod.tajima > mean.str-rod.tajima.txt
+
+cp mean.treatment.tajima ..
+```
+
 ```{r}
-bd <-ggplot(tajd.wvd.dataframe, aes(x=TAJD,y = TREAT))+
-  #geom_violin(aes(color=GROUP,fill= GROUP)) +
+#read table into R
+tajd.df<-read.table(paste("treatment.tajima", sep=""), sep="\t", header=T)
+summary(tajd.df)
+#set up dataframe for ggplot
+tajd.df$TREAT <- factor(tajd.df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
+
+#read table into R 
+mean.tajd.df<-read.table(paste("mean.treatment.tajima", sep=""), sep="\t", header=T)
+#set up df for ggplot
+mean.tajd.df$TREAT <- factor(mean.tajd.df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
+summary(mean.tajd.df)
+```
+
+## Plotting 
+```{r}
+library(ggplot2)
+```
+
+
+Tajima's D by treatment 
+```{r}
+bd <-ggplot(tajd.df, aes(x=TAJD,y = TREAT))+
+  geom_point(aes(color=TREAT,fill= TREAT), position="jitter")+
+  #geom_violin(aes(color=TREAT,fill= TREAT)) +
   #stat_summary(fun=mean, geom="point", shape=23, size=4)+
   #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.005)+
-  geom_boxplot(aes(fill=GROUP), width=0.75,outlier.shape = 23, outlier.color = "black")+
+  geom_boxplot(aes(fill=TREAT), width=0.75,outlier.shape = 23, outlier.color = "black")+
   stat_summary(fun=mean, geom="point", shape=23, size=2)+
-  scale_fill_manual(values=c("#D55E00", "#009E73"))+
-  scale_color_manual(values=c("#D55E00", "#009E73"))+
-  scale_y_discrete(limits = rev(levels(tajd.wvd.dataframe$POP)))+
+  scale_fill_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
+  scale_color_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
+  scale_y_discrete(limits = rev(levels(tajd.df$TREAT)))+
   #ylab("Population/Line")+
   #ggtitle("Wild vs. Selected Tajima's *D*")+
-  theme_classic() +
-  labs(x="Tajima's *D*") +theme(axis.title.x = element_markdown(),  axis.title.y = element_blank(), plot.title = element_markdown()) 
+  theme_classic() # +
+  #labs(x="Tajima's *D*") +theme(axis.title.x = element_markdown(),  axis.title.y = element_blank(), plot.title = element_markdown()) 
+bd
+#bd <- bd + guides(color = "none", fill ="none")
+```
+Mean Tajima's D by treatment
+```{r}
 
-bd <- bd + guides(color = "none", fill ="none")
+bc <-ggplot(mean.tajd.df, aes(x=TAJD,y = TREAT))+
+  geom_point(aes(color=TREAT,fill= TREAT), position="jitter")+
+  #geom_violin(aes(color=TREAT,fill= TREAT)) +
+  #geom_boxplot(aes(fill=TREAT), width=0.1,outlier.shape = 23, outlier.color = "black")+
+  stat_summary(fun=mean, geom="point", shape=23, size=2)+
+  geom_boxplot(aes(fill=TREAT), width=0.75,outlier.shape = 23, outlier.color = "black")+
+  scale_fill_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
+  scale_color_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
+  scale_y_discrete(limits = rev(levels(mean.tajd.df$TREAT)))+
+  #ylab("Origin")+
+  #ggtitle("Wild vs. Selected Tajima's *D*")+
+  theme_classic() +
+  labs(x="Tajima's *D*") #+
+  #theme(legend.position = c(0.85, 0.5), axis.title.y = element_blank(),axis.text.y=element_blank(), plot.title = element_markdown(),axis.title.x = element_markdown())
+
+bc
 ```
 
+## Stats
+
+Summary statistics
+```{r}
+library(dplyr)
+library(plotrix)
+
+group_by(tajd.df, TREAT) %>%
+  dplyr::summarise(
+    count = n(),
+    mean = mean(TAJD, na.rm = TRUE),
+    sd = sd(TAJD, na.rm = TRUE),
+    se=std.error(TAJD, na.rm = TRUE) )
+```
+ANOVA p-value = 1.32e-07 ***
+```{r}
+aov <- aov(TAJD ~ TREAT, tajd.df)
+summary(aov)
+
+TukeyHSD(aov, conf.level = 0.95)
+```
+TUKEY's post-hoc test
+                     diff         lwr         upr     p adj
+STRCON-CONCON -0.42380891 -0.76370849 -0.08390932 0.0074286
+CONROD-CONCON  0.25657482 -0.08334354  0.59649318 0.2116708
+STRROD-CONCON -0.35853983 -0.69843316 -0.01864650 0.0340114
+CONROD-STRCON  0.68038373  0.34050084  1.02026662 0.0000016
+STRROD-STRCON  0.06526908 -0.27458877  0.40512694 0.9605916
+STRROD-CONROD -0.61511465 -0.95499128 -0.27523801 0.0000198
 
 
 
