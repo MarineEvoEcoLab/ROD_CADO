@@ -11,7 +11,7 @@ Last edited: 20250319 MG
 3. [Quality trimming, mapping & filtering](#3-trimming-mapping-and-filtering)
 4. [VCF calling using dDocent & filtering](#4-vcf-calling-using-ddocent-and-filtering)
 5. [PCA](#5-pca)
-6. []()
+6. [Standard R Setup](#6-R-Setup)
 7. []()
 8. []()
 
@@ -435,6 +435,7 @@ We'll run this on the filtered vcf file (/ROD_CADO/analysis/raw.vcf/filtered/SNP
 
 See pcadapt Rmd analysis [here]() - link to Jacob's Rmd!
 
+<<<<<<< HEAD
 Lotterhos paper - pcaadapt is good at picking up linkage
 The Effect of Neutral Recombination Variation on Genome Scans for Selection
 
@@ -443,3 +444,17 @@ https://privefl.github.io/bigsnpr/articles/how-to-PCA.html
 
 
 Starting future analysis with larger SNP file: analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz
+=======
+## 6. R Setup
+
+Here is the color pallette that we will use for everything:
+
+`col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")`
+
+Let's factor treatments as follows:
+
+`df$TREAT <- factor(df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))`
+
+
+
+>>>>>>> df74aa9cea65e03aff422d6201534d11c1a82bab
