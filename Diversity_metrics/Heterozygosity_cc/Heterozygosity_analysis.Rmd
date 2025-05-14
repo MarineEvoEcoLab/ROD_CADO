@@ -25,6 +25,7 @@ ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf
 ```{r}
 library(ggplot2)
 col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")
+# df$TREAT <- factor(df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
 ```
 
 
