@@ -119,7 +119,7 @@ tmux is beneficial to be able to disconnect from terminal and not disrupt fastqc
 tmux new -s my_session
 your_command
 
-#to detach from the session
+#to detach from the session and have things run in the background
 Ctrl + b, then d 
 ##or type
 tmux detach
@@ -424,6 +424,9 @@ vcftools --gzvcf SNP.TRS.. --minDP 10 --max-missing 1.0 --recode-INFO-all --stdo
 #output as a compressed vcf (VCF tools default outputs uncompressed files)
 ```
 
+**Amy did some additional filtering of vcf then converted to a bed file**
+***ADD IN STEPS HERE!!!***
+
 ## 5. PCA 
 We can use PCAdapt for first look at data. This first look will help us determine if we have any interesting patterns to explore further.
 We'll run this on the filtered vcf file (/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf)
@@ -431,3 +434,12 @@ We'll run this on the filtered vcf file (/ROD_CADO/analysis/raw.vcf/filtered/SNP
 [Tutorial on PCA](https://marineevoecolab.github.io/NACE_MAS_Genomics_Workshop/content/PCA.html)
 
 See pcadapt Rmd analysis [here]() - link to Jacob's Rmd!
+
+Lotterhos paper - pcaadapt is good at picking up linkage
+The Effect of Neutral Recombination Variation on Genome Scans for Selection
+
+other helpful links:
+https://privefl.github.io/bigsnpr/articles/how-to-PCA.html 
+
+
+Starting future analysis with larger SNP file: analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz
