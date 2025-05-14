@@ -19,6 +19,16 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Create symbolic link (shortcut) to a compressed VCF file
+
+ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz ~/ROD_CADO/Diversity_metrics/Heterozygosity_cc
+
+
+
+
+
+
+
 # Load requiered libraries
 
 library(vcfR)   # for reading VCF files
