@@ -435,7 +435,6 @@ We'll run this on the filtered vcf file (/ROD_CADO/analysis/raw.vcf/filtered/SNP
 
 See pcadapt Rmd analysis [here]() - link to Jacob's Rmd!
 
-<<<<<<< HEAD
 Lotterhos paper - pcaadapt is good at picking up linkage
 The Effect of Neutral Recombination Variation on Genome Scans for Selection
 
@@ -444,7 +443,7 @@ https://privefl.github.io/bigsnpr/articles/how-to-PCA.html
 
 
 Starting future analysis with larger SNP file: analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz
-=======
+
 ## 6. R Setup
 
 Here is the color pallette that we will use for everything:
@@ -454,7 +453,3 @@ Here is the color pallette that we will use for everything:
 Let's factor treatments as follows:
 
 `df$TREAT <- factor(df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))`
-
-
-
->>>>>>> df74aa9cea65e03aff422d6201534d11c1a82bab
