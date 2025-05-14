@@ -52,7 +52,7 @@ vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --012 --out snp_rod
 sed 's/-1/9/g' snp_rod.012 | cut -f2- > snp_rod.lfmm
 ```
 
-Checking for missing data. We shouldn't have any because any missing data was removed during filtering.
+Checking for missing data. We shouldn't have any because any missing data was removed during filtering. If we did have missing data, we would need to complete another step to have the missing data coded as imputed data and not 9 since LFMM required a complete data frame, meaning no missing genetic data.
 
 ```{bash}
 grep -o 9 snp_rod.lfmm | wc -l
@@ -70,6 +70,10 @@ plot(project_rod, col = "blue", pch = 19, cex = 1.2)
 ```
 
 Based on the plot of cross-entropy, K = 5 or K = 7 has the lowest cross-entropy value. After talking to Jon,  it was suggested to interpret this plot more like a scree plot. In that case, we would choose K = 4 which also corresponds to the number of treatments.
+
+Determining K is a key step for LFMM. LFMM accounts for the background associations seen in genetic vatiation with environmental variation using latent factors to model the unobserved variation/background structure. We must determine the amount of latent factors to include, and this in turn influences the power of the test. It is recommended to first start by using the number of population clusters, K from the structure analysis as the initial value, the consider Ks slightly higher or lower to control power and error. snmf is a function in LEA that estimates K. 
+
+The plot we see from the above step has entropy on the y-axis. We want to see what value of k has the lowest entropy. This shows how well K explains the variance. A lower K value has better prediction capability and there is less conflict in the model.
 
 ```{r}
 # Generating a Structure-type plot. 
@@ -151,7 +155,7 @@ gen_rod.pca <- rda(gen_rod, scale=T)
 screeplot(gen_rod.pca, main = "Screeplot of Genetic Data with Broken Stick", bstick=TRUE, type="barplot")
 ```
 
-For the genomic data, we can see that one of the PCs have eigenvalues greater than random (greater than the broken stick values in red). This effectively means that K=2 for the genomic data set, based on a PCA assessment. I'm going to move forward, trying both K = 2 (from broken stick method) and K = 4 (from STRUCTURE analysis). We'll see how the output changes for both.
+For the genomic data, we can see that one of the PCs have eigenvalues greater than random (greater than the broken stick values in red). This effectively means that K=2 for the genomic data set, based on a PCA assessment. This is because K = 2 is the value where the red “broken stick” is not contained in the values. I'm going to move forward, trying both K = 2 (from broken stick method) and K = 4 (from STRUCTURE analysis). We'll see how the output changes for both.
 
 ```{r}
 K <- 4
@@ -159,7 +163,7 @@ K <- 4
 
 ### Run LFMM 
 
-Looking at the CADO variable first.
+Looking at the CADO variable first. We looked at CADO and disease separately, so we will run through this twice. The ridge step takes a little while to run. 
 
 ```{r}
 oys_rod_CADO.lfmm <- lfmm_ridge(Y=gen_rod, X=CADO, K=K) ## change K as you see fit
@@ -172,12 +176,14 @@ oys_rod_CADO.pv <- lfmm_test(Y=gen_rod, X=CADO, lfmm=oys_rod_CADO.lfmm, calibrat
 names(oys_rod_CADO.pv) # this object includes raw z-scores and p-values, as well as GIF-calibrated scores and p-values
 ```
 
+Next, we calculate test statistics from the model. We are especially interested in the genomic inflation factor (GIF). 
+
 ```{r}
 #Looking at the genomic inflation factor (GIF) - a value around 1 means the test(s) is appropriately calibrated. Here it is 1.08.
 oys_rod_CADO.pv$gif
 ```
 
-An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative.
+An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative. The GIF relates to how the model accounts for different factors. It affects how p-values are calculated for each SNP to determine significance. Below, we will look at the histograms of the p-values.  
 
 ```{r}
 # look at how application of the GIF to the p-values impacts the p-value distribution:
@@ -185,7 +191,7 @@ hist(oys_rod_CADO.pv$pvalue[,1], main="Unadjusted p-values")
 hist(oys_rod_CADO.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values")
 ```
 
-There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers.
+There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers. If you have a big peak around 0, it indicates a lot of outliers. You may not have outliers with the default GIF value but you can readjust this GIF value and reassess. Decreasing the GIF value may help. You can then run PCA on the outliers to see if the stress outliers are different from the control outliers to confirm your findings. 
 
 ```{r}
 # Let's change the GIF and readjust the p-values:
@@ -206,6 +212,8 @@ hist(oys_rod_CADO.pv$pvalue[,1], main="Unadjusted p-values")
 hist(oys_rod_CADO.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.08)")
 hist(adj.pv_rod_CADO, main="REadjusted p-values (GIF=1.00)")
 ```
+
+An FDR of 10% is usually standard to identify outliers. The FDR threshold can be used to adjust for false positives. q-values represent each SNP’s significance, taking into account the fact that thousands of SNPs are being tested. The steps below establish an FDR threshold. 
 
 ```{r}
 #convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
@@ -230,7 +238,7 @@ invisible(lapply(oys_rod_CADO.FDR.1, write, "outliers_lfmm2_CADO.txt", append=TR
 ```
 
 
-Now looking at the disease variable.
+Now looking at the disease variable.This is repeating everything that we did above, except now examining disease. 
 
 ```{r}
 oys_rod_DIS.lfmm <- lfmm_ridge(Y=gen_rod, X=DIS, K=K) ## change K as you see fit
@@ -431,21 +439,4 @@ hist(adj.pv_rod_K2_DIS, main="REadjusted p-values (GIF=0.96)")
 ```{r}
 #convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
 # then an FDR threshold can be used to control the number of false positive detections
-oys_rod_K2_DIS.qv <- qvalue(oys_rod_K2_DIS.pv$calibrated.pvalue)$qvalues
-length(which(oys_rod_K2_DIS.qv < 0.1)) ## how many SNPs have an FDR < 10%?
-```
-
-```{r}
-#Trying with the GIF adjusted value
-oys_rod_K2_DIS.qv <- qvalue(adj.pv_rod_K2_DIS)$qvalues
-length(which(oys_rod_K2_DIS.qv < 0.1)) ## how many SNPs have an FDR < 10%?
-```
-
-```{r}
-oys_rod_K2_DIS.FDR.1 <- which(oys_rod_K2_DIS.qv < 0.1) ## identify which SNPs these are
-oys_rod_K2_DIS.FDR.1
-```
-
-```{r}
-invisible(lapply(oys_rod_K2_DIS.FDR.1, write, "outliers_lfmm2_DIS.txt", append=TRUE))
-```
+oys_rod_K2_DIS.qv <- qvalue
