@@ -11,7 +11,7 @@ Last edited: 20250319 MG
 3. [Quality trimming, mapping & filtering](#3-trimming-mapping-and-filtering)
 4. [VCF calling using dDocent & filtering](#4-vcf-calling-using-ddocent-and-filtering)
 5. [PCA](#5-pca)
-6. []()
+6. [Standard R Setup](#6-R-Setup)
 7. []()
 8. []()
 
@@ -431,3 +431,12 @@ We'll run this on the filtered vcf file (/ROD_CADO/analysis/raw.vcf/filtered/SNP
 [Tutorial on PCA](https://marineevoecolab.github.io/NACE_MAS_Genomics_Workshop/content/PCA.html)
 
 See pcadapt Rmd analysis [here]() - link to Jacob's Rmd!
+
+## 6. R Setup
+
+Here is the color pallette that we will use for everything:
+
+`col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")`
+
+
+
