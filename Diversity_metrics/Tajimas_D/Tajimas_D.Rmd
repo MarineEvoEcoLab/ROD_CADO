@@ -139,6 +139,7 @@ summary(mean.tajd.df)
 ## Plotting 
 ```{r}
 library(ggplot2)
+col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")
 ```
 
 
@@ -151,8 +152,8 @@ bd <-ggplot(tajd.df, aes(x=TAJD,y = TREAT))+
   #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.005)+
   geom_boxplot(aes(fill=TREAT), width=0.75,outlier.shape = 23, outlier.color = "black")+
   stat_summary(fun=mean, geom="point", shape=23, size=2)+
-  scale_fill_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
-  scale_color_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
+  scale_fill_manual(values=col_pal)+
+  scale_color_manual(values=col_pal)+
   scale_y_discrete(limits = rev(levels(tajd.df$TREAT)))+
   #ylab("Population/Line")+
   #ggtitle("Wild vs. Selected Tajima's *D*")+
@@ -170,8 +171,8 @@ bc <-ggplot(mean.tajd.df, aes(x=TAJD,y = TREAT))+
   #geom_boxplot(aes(fill=TREAT), width=0.1,outlier.shape = 23, outlier.color = "black")+
   stat_summary(fun=mean, geom="point", shape=23, size=2)+
   geom_boxplot(aes(fill=TREAT), width=0.75,outlier.shape = 23, outlier.color = "black")+
-  scale_fill_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
-  scale_color_manual(values=c("#D55E00", "#009E73", "cornflowerblue", "goldenrod"))+
+  scale_fill_manual(values=col_pal)+
+  scale_color_manual(values=col_pal)+
   scale_y_discrete(limits = rev(levels(mean.tajd.df$TREAT)))+
   #ylab("Origin")+
   #ggtitle("Wild vs. Selected Tajima's *D*")+
