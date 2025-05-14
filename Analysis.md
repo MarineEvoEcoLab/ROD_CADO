@@ -438,5 +438,9 @@ Here is the color pallette that we will use for everything:
 
 `col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")`
 
+Let's factor treatments as follows:
+
+`df$TREAT <- factor(df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))`
+
 
 
