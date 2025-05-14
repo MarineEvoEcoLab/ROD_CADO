@@ -15,7 +15,7 @@ https://github.com/The-Eastern-Oyster-Genome-Project/2024_Eastern_Oyster_Populat
 
 # Create symbolic link (shortcut) to a compressed VCF file
 
-ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz ~/ROD_CADO/Diversity_metrics/Heterozygosity_cc
+ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz /home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity_cc
 
 
 
