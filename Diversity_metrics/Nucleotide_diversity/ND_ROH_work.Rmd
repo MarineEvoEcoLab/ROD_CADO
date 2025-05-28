@@ -53,21 +53,32 @@ Nucleotide diversity (often referred to using the symbol π) is the average pair
 
 We can obtain the nucleotide diversity (π) from our VCF file using vcftools software. In our case we will collect the π value from each 10 kb (10,000 bp) window of the genome.
 
-NB: vcftools is a very flexible tool for analyzing, manipulating VCF files. It can do many other wonderful things. The vcftools manual is on github here.
+NB: vcftools is a very flexible tool for analyzing, manipulating VCF files. It can do many other wonderful things. The vcftools manual is on github here (https://vcftools.sourceforge.net/man_latest.html).
 
 ## Start of modified workflow
 
 ### Run VCF tools PI window
 ```{bash eval = FALSE}
 #bcftools view --threads 20 -S SNP.TRSdp10g1.FIL.vcf | vcftools --vcf -  --window-pi 10000 --out ROD.CADO.all.pi
-vcftools --vcf SNP.TRSdp10g1.FIL.vcf --window-pi 10000 --out ROD.CADO.all.pi
+vcftools --vcf SNP.TRSdp10g1.FIL.vcf --window-pi 10000 --out ROD.CADO.all.pi.windowed.pi
 ```
 
 ### Load dataframe
 ```{r, message=FALSE, warning=FALSE}
-pi.all.dataframe<-read.table("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/ROD.CADO.all.pi", sep="\t", header=T)
+pi.all.dataframe<-read.table("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/ROD.CADO.all.pi.windowed.pi", sep="\t", header=T)
 ```
 
+### Color palette
+
+```{r}
+#Here is the color pallette that we will use for everything:
+
+col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")
+
+#Let's factor treatments as follows:
+
+df$TREAT <- factor(df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
+```
 
 ### Modify CHROM column in dataframe
 ```{r, message=FALSE, warning=FALSE}
@@ -85,6 +96,13 @@ pi.all.dataframe %>%
 mydf$CHROM <- as.factor(mydf$CHROM)
 ```
 
+
+### Descriptive statistics
+```{r}
+summary(mydf)
+by(mydf, mydf$CHROM, summary)
+cor(mydf$N_VARIANTS, mydf$PI)
+```
 ### Plot PI by chromosome
 ```{r, message=FALSE, warning=FALSE}
 ggplot(mydf, aes(x=CHROM, y=PI,))+
@@ -141,6 +159,10 @@ print(plot_list[["chr3"]])
 
 ```
 
+### Breaking up pi by treatment type?
+
+I believe that the next step would be to compare nucleotide diversity between the different treatment groups. I need to think about how to pipe the different treatment groups from the VCF file to the PI command. Maybe I don't need to do this but can help with other metrics?
+
 # Runs of homozygosity
 
 Runs of homozygosity (ROH) are contiguous lengths of homozygous genotypes that are present in an individual due to parents transmitting identical haplotypes to their offspring.
@@ -151,7 +173,7 @@ This technique can be used to identify the genomic footprint of inbreeding in co
 
 ## Start ROH workflow
 
-```{bash }
+```{bash}
 vcftools --vcf SNP.TRSdp10g1.FIL.vcf --LROH --out ROD.CADO.all.LROH
 ```
 
