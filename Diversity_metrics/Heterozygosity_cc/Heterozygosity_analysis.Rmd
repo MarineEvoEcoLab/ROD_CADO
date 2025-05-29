@@ -19,8 +19,23 @@ https://github.com/The-Eastern-Oyster-Genome-Project/2024_Eastern_Oyster_Populat
 ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz /home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity_cc
 ```
 
+```{bash}
 
+# CON-CON
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONCON"}' ./treat_het/con-con.het) > ./treat_het/con-con-treat.het
 
+# STR-CON
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRCON"}' ./treat_het/str-con.het) > ./treat_het/str-con-treat.het
+
+# CON-ROD
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONROD"}' ./treat_het/con-rod.het) > ./treat_het/con-rod-treat.het
+
+# STR-ROD
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_het/str-rod.het) > ./treat_het/str-rod-treat.het
+
+mkdir -p ./Output/Heterozygosity
+cp con-con-treat.het str-con-treat.het con-rod-treat.het str-rod-treat.het ./Output/Heterozygosity
+```
 
 
 ## Plotting 
