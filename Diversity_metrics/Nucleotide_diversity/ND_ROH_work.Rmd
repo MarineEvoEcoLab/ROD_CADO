@@ -57,12 +57,136 @@ NB: vcftools is a very flexible tool for analyzing, manipulating VCF files. It c
 
 ## Start of modified workflow
 
+## Setup 
+
+The following was run on the command line
+```{bash}
+# Make ROD_CADO_working directory in home
+mkdir ROD_CADO_working
+cd ROD_CADO_working
+# Make Nucleotide_diversity directory
+mkdir ROD_CADO_working
+# create popmap file with sample and treatment names
+cp /home/Shared_Data/ROD_CADO/analysis/popmap popmap
+# manually add in treatment names to popmap file (w/ code)
+head treat_popmap 
+```
+C1_2    con-con
+C1_4    con-con
+C1_5    con-con
+C1_6    con-con
+C1_7    con-con
+C1_8    con-con
+C1_9    con-con
+C2_10   con-con
+C2_11   con-con
+C2_2    con-con
+
+Create treatment specific files containing a single column of all of the sample names within that treatment
+```{bash}
+awk '$2 == "con-con" {print $1}' treat_popmap > con-con.txt | awk '$2 == "str-con" {print $1}' treat_popmap > str-con.txt | awk '$2 == "con-rod" {print $1}' treat_popmap > con-rod.txt | awk '$2 == "str-rod" {print $1}' treat_popmap > str-rod.txt
+```
+
 ### Run VCF tools PI window
 ```{bash eval = FALSE}
 #bcftools view --threads 20 -S SNP.TRSdp10g1.FIL.vcf | vcftools --vcf -  --window-pi 10000 --out ROD.CADO.all.pi
-vcftools --vcf SNP.TRSdp10g1.FIL.vcf --window-pi 10000 --out ROD.CADO.all.pi.windowed.pi
+
+# For con-con
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --keep con-con.txt --recode --recode-INFO-all --out temp_concon_filtered
+
+# Step 2: bgzip output
+bgzip temp_concon_filtered.recode.vcf
+
+# Step 3: Calculate windowed pi
+vcftools --gzvcf temp_concon.filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.con-con.pi.windowed.pi
+
+# For str-con
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --keep popmap_files/str-con.txt --recode --recode-INFO-all --out temp_strcon_filtered
+
+# Step 2: bgzip output
+bgzip temp_strcon_filtered.recode.vcf
+
+# Step 3: # Step 3: Calculate windowed pi
+vcftools --gzvcf temp_strcon_filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.str-con.pi.windowed.pi
+
+# For con-rod
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf --keep popmap_files/con-rod.txt --recode --recode-INFO-all --out temp_conrod_filtered
+
+# Step 2: bgzip output
+bgzip temp_conrod_filtered.recode.vcf
+
+# Step 3: Calculate windowed pi
+vcftools --gzvcf temp_conrod_filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.con-rod.pi.windowed.pi
+
+# For str-rod
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf --keep popmap_files/str-rod.txt --recode --recode-INFO-all --out temp_strrod_filtered
+
+# Step 2: bgzip output
+bgzip temp_strrod_filtered.recode.vcf
+
+# Step 3: Calculate windowed pi
+vcftools --gzvcf temp_strrod_filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.str-rod.pi.windowed.pi
 ```
 
+### Make loop with help from ChatGPT
+
+#### Make script
+
+```{bash}
+#!/bin/bash
+
+VCF=SNP.TRSdp10g1.FIL.vcf.gz
+POPS=("con-con" "str-con" "con-rod" "str-rod")
+
+for POP in "${POPS[@]}"; do
+    echo "Processing $POP..."
+
+    KEEP="popmap_files/${POP}.txt"
+    OUT_PREFIX="temp_${POP//-}"
+    REC_VCF="${OUT_PREFIX}.recode.vcf"
+    REC_VCFGZ="${REC_VCF}.gz"
+    OUTPUT_PI="ROD.CADO.${POP}.pi.windowed.pi"
+
+    # Step 1: Filter and recode
+    vcftools --gzvcf "$VCF" \
+        --keep "$KEEP" \
+        --recode --recode-INFO-all \
+        --out "$OUT_PREFIX"
+
+    # Step 2: Compress VCF and remove uncompressed
+    bgzip "$REC_VCF"
+    rm "$REC_VCF"
+
+    # Step 3: Calculate windowed pi
+    vcftools --gzvcf "$REC_VCFGZ" \
+        --window-pi 10000 \
+        --out "$OUTPUT_PI"
+
+    # Step 4: Clean up compressed VCF
+    rm "$REC_VCFGZ"
+
+    echo "Finished processing $POP"
+    echo "---------------------------"
+done
+```
+
+#### Make executable
+
+```{bash}
+chmod +x run_pi_calculations.sh
+```
+
+#### Run in tmux
+```{bash}
+# Run in tmux
+tmux new -s pi_calc
+# Reattach later
+tmux attach-session -t pi_calc
+```
 ### Load dataframe
 ```{r, message=FALSE, warning=FALSE}
 pi.all.dataframe<-read.table("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/ROD.CADO.all.pi.windowed.pi", sep="\t", header=T)
