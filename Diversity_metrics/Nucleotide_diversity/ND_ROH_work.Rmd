@@ -400,7 +400,7 @@ mean_n_plot <- ggplot(summary_df, aes(x = CHROM, y = mean_N_VARIANTS, fill = TRE
   geom_errorbar(aes(ymin = mean_N_VARIANTS - se_N_VARIANTS, ymax = mean_N_VARIANTS + se_N_VARIANTS),
                 position = position_dodge(width = 0.8), width = 0.2) +
   scale_fill_manual(values = col_pal, name = "Treatment") +
-  labs(title = "Mean N_VARIANTS per Chromosome", x = "Chromosome", y = "Mean N_VARIANTS") +
+  labs(title = "Mean number of variants per Chromosome", x = "Chromosome", y = "Mean # variants") +
   theme_minimal()
 
 print(mean_pi_plot)
@@ -420,7 +420,7 @@ for (i in seq_along(df_names)) {
   p <- ggplot(df, aes(x = N_VARIANTS, y = PI)) +
     geom_point(alpha = 0.4) +
     geom_smooth(method = "lm", se = FALSE, color = "blue") +
-    labs(title = paste("Correlation: PI vs N_VARIANTS —", label),
+    labs(title = paste("Correlation: PI vs # variants —", label),
          x = "N_VARIANTS",
          y = "PI") +
     theme_minimal()
@@ -495,22 +495,36 @@ boxplot(mydf$PI, ylab="Nuc Diversity")
 ```{r, message=FALSE, warning=FALSE}
 ggplot(pi.all.df, aes(x=BIN_START, y=PI, color=CHROM))+
   geom_point()+
+  scale_fill_brewer(palette = "Paired") +
+  scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +
   facet_wrap(~CHROM)+
   theme_classic()
 ```
 ### Loop for plot by position
 ```{r}
+# Define dataframe names and labels
 df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
 df_labels <- c("ALL", "CONCON", "CONROD", "STRCON", "STRROD")
 
+# Get global PI range
+all_pi_values <- unlist(lapply(df_names, function(x) get(x)$PI))
+global_ymin <- min(all_pi_values, na.rm = TRUE)
+global_ymax <- max(all_pi_values, na.rm = TRUE)
+
+# Loop over dataframes
 for (i in seq_along(df_names)) {
   df <- get(df_names[i])
   label <- df_labels[i]
   
+  # Ensure CHROM is a factor ordered from 1 to 10
+  df$CHROM <- factor(df$CHROM, levels = as.character(1:10))
+  
   p <- ggplot(df, aes(x = BIN_START, y = PI, color = CHROM)) +
     geom_point() +
     facet_wrap(~CHROM) +
-    scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +  # Human readable x-axis in millions
+    scale_fill_brewer(palette = "Paired") +
+    scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +  # Human readable x-axis
+    ylim(global_ymin, global_ymax) +  # Same y-axis for all plots
     theme_classic() +
     labs(title = paste("PI vs BIN_START -", label),
          x = "BIN_START (millions)",
@@ -521,8 +535,69 @@ for (i in seq_along(df_names)) {
   ggsave(filename = paste0("PI_vs_BIN_START_", label, ".png"),
          plot = p, width = 10, height = 6, dpi = 300)
 }
+
 ```
 
+### Facet wrap chromosome showing them across different treatment types
+```{r}
+# Define dataframe names and labels
+df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
+df_labels <- c("ALL", "CONCON", "CONROD", "STRCON", "STRROD")
+
+# Custom color palette
+col_pal <- c(
+  "ALL" = "gray70",
+  "CONCON" = "#0072B2", 
+  "STRCON" = "#56B4E9", 
+  "CONROD" = "#E69F00", 
+  "STRROD" = "#F0E442"
+)
+
+# Combine all data into one dataframe with treatment labels
+all_data <- bind_rows(lapply(seq_along(df_names), function(i) {
+  df <- get(df_names[i])
+  df$Treatment <- df_labels[i]
+  df
+}))
+
+# Set CHROM and Treatment as ordered factors
+all_data$CHROM <- factor(all_data$CHROM, levels = as.character(1:10))
+all_data$Treatment <- factor(all_data$Treatment, levels = df_labels)
+
+# Get global PI range
+global_ymin <- min(all_data$PI, na.rm = TRUE)
+global_ymax <- max(all_data$PI, na.rm = TRUE)
+
+# Loop through chromosomes 1 to 10
+for (chr in 1:10) {
+  chr_str <- as.character(chr)
+  chr_data <- filter(all_data, CHROM == chr_str)
+  
+  p <- ggplot(chr_data, aes(x = BIN_START, y = PI, color = Treatment)) +
+    geom_point(alpha = 0.6, size = 0.5) +
+    facet_wrap(~Treatment, nrow = 1) +
+    scale_color_manual(values = col_pal) +
+    scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +
+    ylim(global_ymin, global_ymax) +
+    theme_classic() +
+    labs(
+      title = paste("Chromosome", chr, "- PI across Treatment Types"),
+      x = "BIN_START (millions)",
+      y = "PI"
+    )
+  
+  print(p)
+  
+  ggsave(
+    filename = paste0("PI_chr", chr, "_across_treatments.png"),
+    plot = p,
+    width = 16,
+    height = 4,
+    dpi = 300
+  )
+}
+
+```
 ### Only chromosome 1
 ```{r, message=FALSE, warning=FALSE}
 # Subset by chrom
@@ -534,24 +609,34 @@ ggplot(mydf.chr1, aes(x=BIN_START, y=PI))+
 ```
 
 ```{r}
-# Create an empty list to store the plots
-plot_list <- list()
+# List of treatment data frames and their labels
+df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
+df_labels <- c("ALL", "CONCON", "CONROD", "STRCON", "STRROD")
 
-# Loop through chromosomes 1 to 10
-for (i in 1:10) {
-  chr_data <- mydf[which(mydf$CHROM == as.character(i)), ]
+# Step 1: Calculate global PI range across all dataframes
+all_pi_values <- unlist(lapply(df_names, function(x) get(x)$PI))
+global_ymin <- min(all_pi_values, na.rm = TRUE)
+global_ymax <- max(all_pi_values, na.rm = TRUE)
+
+# Step 2: Create plots and save as PNGs
+for (j in seq_along(df_names)) {
+  df <- get(df_names[j])
+  label <- df_labels[j]
   
-  p <- ggplot(chr_data, aes(x = BIN_START, y = PI)) +
-    geom_point() +
-    theme_classic() +
-    ggtitle(paste("Chromosome", i))
-  
-  # Store the plot in the list
-  plot_list[[paste0("chr", i)]] <- p
+  for (i in 1:10) {
+    chr_data <- df[df$CHROM == as.character(i), ]
+    
+    p <- ggplot(chr_data, aes(x = BIN_START, y = PI)) +
+      geom_point() +
+      theme_classic() +
+      ggtitle(paste("Treatment:", label, "- Chromosome", i)) +
+      labs(x = "BIN_START", y = "PI") +
+      ylim(global_ymin, global_ymax)
+    
+    filename <- paste0("PI_", label, "_chr", i, ".png")
+    ggsave(filename = filename, plot = p, width = 8, height = 5, dpi = 300)
+  }
 }
-
-# To display one of the plots, for example:
-print(plot_list[["chr3"]])
 
 ```
 
