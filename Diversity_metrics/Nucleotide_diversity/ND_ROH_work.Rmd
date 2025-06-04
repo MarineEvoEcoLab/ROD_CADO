@@ -45,6 +45,7 @@ library(vcfR)
 library(stringr)
 library(matrixStats)
 library(purrr)
+library(scales) 
 ```
 
 # Nucleotide diversity
@@ -323,13 +324,33 @@ for (i in seq_along(input_names)) {
 }
 ```
 
+
+### Descriptive statistics
+```{r}
+summary(pi.all.df)
+by(pi.all.df, pi.all.df$CHROM, summary)
+cor(pi.all.df$N_VARIANTS, pi.all.df$PI)
+
+summary(pi.concon.df)
+by(pi.concon.df, pi.concon.df$CHROM, summary)
+cor(pi.concon.df$N_VARIANTS, pi.concon.df$PI)
+
+summary(pi.conrod.df)
+by(pi.conrod.df, pi.conrod.df$CHROM, summary)
+cor(pi.conrod.df$N_VARIANTS, pi.conrod.df$PI)
+
+summary(pi.strcon.df)
+by(pi.strcon.df, pi.strcon.df$CHROM, summary)
+cor(pi.strcon.df$N_VARIANTS, pi.strcon.df$PI)
+
+summary(pi.strrod.df)
+by(pi.strrod.df, pi.strrod.df$CHROM, summary)
+cor(pi.strrod.df$N_VARIANTS, pi.strrod.df$PI)
+```
+
 ### New loop and plotting for statistics
 
 ```{r}
-library(dplyr)
-library(ggplot2)
-library(tidyr)
-
 col_pal <- c(
   "ALL" = "gray70",
   "CONCON" = "#0072B2", 
@@ -382,74 +403,11 @@ mean_n_plot <- ggplot(summary_df, aes(x = CHROM, y = mean_N_VARIANTS, fill = TRE
   labs(title = "Mean N_VARIANTS per Chromosome", x = "Chromosome", y = "Mean N_VARIANTS") +
   theme_minimal()
 
+print(mean_pi_plot)
+print(mean_n_plot)
+
 ggsave("mean_pi_plot.png", plot = mean_pi_plot, width = 10, height = 6, dpi = 300)
 ggsave("mean_n_variants_plot.png", plot = mean_n_plot, width = 10, height = 6, dpi = 300)
-
-```
-
-
-### Descriptive statistics
-```{r}
-summary(pi.all.df)
-by(pi.all.df, pi.all.df$CHROM, summary)
-cor(pi.all.df$N_VARIANTS, pi.all.df$PI)
-
-summary(pi.concon.df)
-by(pi.concon.df, pi.concon.df$CHROM, summary)
-cor(pi.concon.df$N_VARIANTS, pi.concon.df$PI)
-
-summary(pi.conrod.df)
-by(pi.conrod.df, pi.conrod.df$CHROM, summary)
-cor(pi.conrod.df$N_VARIANTS, pi.conrod.df$PI)
-
-summary(pi.strcon.df)
-by(pi.strcon.df, pi.strcon.df$CHROM, summary)
-cor(pi.strcon.df$N_VARIANTS, pi.strcon.df$PI)
-
-summary(pi.strrod.df)
-by(pi.strrod.df, pi.strrod.df$CHROM, summary)
-cor(pi.strrod.df$N_VARIANTS, pi.strrod.df$PI)
-```
-
-### For loop for statistics and visualizations
-
-```{r}
-# List of dataframes
-df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
-df_labels <- c("All", "ConCon", "ConRod", "StrCon", "StrRod")
-
-# Define chromosome order explicitly
-chrom_levels <- as.character(1:10)
-
-# Build summary list
-summary_list <- list()
-
-for (i in seq_along(df_names)) {
-  df <- get(df_names[i])
-  label <- df_labels[i]
-  
-  chrom_summary <- df %>%
-    group_by(CHROM) %>%
-    summarise(
-      mean_PI = mean(PI, na.rm = TRUE),
-      mean_N_VARIANTS = mean(N_VARIANTS, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      dataset = label,
-      CHROM = factor(CHROM, levels = chrom_levels)  # enforce order
-    )
-  
-  summary_list[[i]] <- chrom_summary
-}
-
-summary_df <- bind_rows(summary_list)
-
-# Plot: Mean PI per CHROM by dataset
-ggplot(summary_df, aes(x = CHROM, y = mean_PI, fill = dataset)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
-  labs(title = "Mean PI per Chromosome", y = "Mean PI", x = "Chromosome") +
-  theme_minimal()
 
 ```
 
@@ -542,7 +500,6 @@ ggplot(pi.all.df, aes(x=BIN_START, y=PI, color=CHROM))+
 ```
 ### Loop for plot by position
 ```{r}
-# List of dataframes and labels
 df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
 df_labels <- c("ALL", "CONCON", "CONROD", "STRCON", "STRROD")
 
@@ -553,12 +510,14 @@ for (i in seq_along(df_names)) {
   p <- ggplot(df, aes(x = BIN_START, y = PI, color = CHROM)) +
     geom_point() +
     facet_wrap(~CHROM) +
+    scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +  # Human readable x-axis in millions
     theme_classic() +
     labs(title = paste("PI vs BIN_START -", label),
-         x = "BIN_START",
+         x = "BIN_START (millions)",
          y = "PI")
+  
   print(p)
-  # Save each plot as PNG
+  
   ggsave(filename = paste0("PI_vs_BIN_START_", label, ".png"),
          plot = p, width = 10, height = 6, dpi = 300)
 }
