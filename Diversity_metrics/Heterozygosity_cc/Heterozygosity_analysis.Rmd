@@ -13,10 +13,29 @@ knitr::opts_chunk$set(echo = TRUE)
 Jon's code: 
 https://github.com/The-Eastern-Oyster-Genome-Project/2024_Eastern_Oyster_Population_Genomics/blob/main/Oyster_Genome_Population_Genomic_Analysis.md#heterozygosity
 
-# Create symbolic link (shortcut) to a compressed VCF file
+# Set up working directory and create symbolic link to the compressed VCF file
 
 ```{bash}
-ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz /home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity_cc
+cd /home/ccaillon/
+mkdir ROD_CADO_CC_working
+cd ROD_CADO_CC_working
+ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz filtered.vcf.gz
+```
+
+```{bash}
+# create popmap file with sample and treatment names
+cd /home/ccaillon/ROD_CADO_CC_working
+mkdir popmap_files
+cd popmap_files
+cp /home/Shared_Data/ROD_CADO/analysis/popmap treat_popmap
+#add in treatment names to popmap file (w/ code)
+head treat_popmap 
+```
+
+cd /home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity_cc
+
+ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz
+/home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity_cc
 ```
 
 ```{bash}
