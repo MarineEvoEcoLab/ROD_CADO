@@ -32,11 +32,30 @@ cp /home/Shared_Data/ROD_CADO/analysis/popmap treat_popmap
 head treat_popmap 
 ```
 
-cd /home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity_cc
+#Create treatment specific files containing a single column of all of the sample names within that treatment
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/popmap_files
 
-ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz
-/home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity_cc
+#Rename treatments
+awk '$2 ~ /^C[123]$/ { $2 = "CONCON" } 
+$2 ~ /^R[123]$/ { $2 = "CONROD" }
+$2 ~ /^CH[123]$/ { $2 = "STRCON" }
+$2 ~ /^RH[123]$/ { $2 = "STRROD" }
+{ print }' treat_popmap > treat_popmap_renamed
+
+awk '$2 == "CONCON" {print $1}' treat_popmap_renamed > CONCON.txt
+awk '$2 == "STRCON" {print $1}' treat_popmap_renamed > STRCON.txt
+awk '$2 == "CONROD" {print $1}' treat_popmap_renamed > CONROD.txt
+awk '$2 == "STRROD" {print $1}' treat_popmap_renamed > STRROD.txt
 ```
+
+#Subset the VCF by treatment and calculate heterozygosity for each treatment
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/
+mkdir treat_heterozygosity
+
+```
+
 
 ```{bash}
 
