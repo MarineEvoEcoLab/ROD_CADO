@@ -54,7 +54,49 @@ awk '$2 == "STRROD" {print $1}' treat_popmap_renamed > STRROD.txt
 cd /home/ccaillon/ROD_CADO_CC_working/
 mkdir treat_heterozygosity
 
+popStats -y GT --file <( bcftools view --threads 40 ./ROD_CADO_CC_working/filtered.vcf.gz) --keep popmap_files/CONCON.txt --recode --recode-INFO-all --stdout > ./treat_heterozygosity/CONCON.het 
 ```
+
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/
+mkdir -p treat_heterozygosity
+
+samples=$(cat popmap_files/CONCON.txt)
+INDS=$(bcftools query -l ./ROD_CADO_CC_working/filtered.vcf.gz | awk -v samples="$samples"
+popStats -y GT --file <( bcftools view --threads 40 ./ROD_CADO_CC_working/filtered.vcf.gz) -t $INDS > ./treat_heterozygosity/CONCON.het 
+
+```
+
+good one
+```{bash}
+time {
+cd /home/ccaillon/ROD_CADO_CC_working/
+mkdir -p treat_heterozygosity  # -p prevents error if directory exists
+
+# Get sample indices
+samples=$(cat popmap_files/CONCON.txt)
+INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
+BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
+  { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
+
+# Run popStats
+popStats -y GT \
+    --file <(bcftools view --threads 40 ./filtered.vcf.gz) \
+    --target "$INDS" \
+    > ./treat_heterozygosity/CONCON.het
+}
+```
+
+
+popStats -y GT --file <( bcftools view --threads 40 ./Population_Genomics/SNP.MASKED.TRSdp5g75.nDNA.g1.maf05.max2alleles.FIL.vcf.gz) -t $INDS > ./Population_Genomics/Intermediate_Files/CL.MASKED.popstats &
+
+
+
+popStats -y GT --file <(bcftools view --threads 40 ./ROD_CADO_CC_working/filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/CONCON.het
+  
+```
+
+vcftools --gzvcf filtered.vcf.gz --keep popmap_files/con-con.txt --recode --recode-INFO-all --stdout | vk tajima 10000 10000 -> ./treat_tajima/con-con.tajima
 
 
 ```{bash}
