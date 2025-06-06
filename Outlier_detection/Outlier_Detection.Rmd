@@ -142,6 +142,10 @@ dim(gen_rod)
 CADO <- clim.env_rod$CADO
 
 DIS <- clim.env_rod$Disease
+
+COMB_BIN <- clim.env_rod$Combined_Bin
+
+COMB_ADD <- clim.env_rod$Combined_Add
 ```
 
 ## Determine K (estimate of number of populations in the data)
@@ -162,7 +166,7 @@ K <- 4
 Looking at the CADO variable first.
 
 ```{r}
-oys_rod_CADO.lfmm <- lfmm_ridge(Y=gen_rod, X=CADO, K=K) ## change K as you see fit
+oys_rod_CADO.lfmm <- lfmm_ridge(Y=gen_rod, X=CADO, K=4) ## change K as you see fit
 ```
 
 ```{r}
@@ -194,7 +198,7 @@ zscore_rod_CADO <- oys_rod_CADO.pv$score[,1]   # zscores for first predictor, we
 ```
 
 ```{r}
-new.gif <- 1.00           ## choose your new GIF
+new.gif <- 0.95           ## choose your new GIF
 
 # Manual adjustment of the p-values:
 adj.pv_rod_CADO <- pchisq(zscore_rod_CADO^2/new.gif, df=1, lower = FALSE)
@@ -204,7 +208,7 @@ adj.pv_rod_CADO <- pchisq(zscore_rod_CADO^2/new.gif, df=1, lower = FALSE)
 # plot the p-value histograms with the new gif
 hist(oys_rod_CADO.pv$pvalue[,1], main="Unadjusted p-values")        
 hist(oys_rod_CADO.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.08)")
-hist(adj.pv_rod_CADO, main="REadjusted p-values (GIF=1.00)")
+hist(adj.pv_rod_CADO, main="REadjusted p-values (GIF=0.95)")
 ```
 
 ```{r}
@@ -221,19 +225,19 @@ length(which(oys_rod_CADO.qv < 0.1)) ## how many SNPs have an FDR < 10%?
 ```
 
 ```{r}
-oys_rod_CADO.FDR.1 <- which(oys_rod_CADO.qv < 0.1) ## identify which SNPs these are
+oys_rod_CADO.FDR.1 <- as.vector(which(oys_rod_CADO.qv < 0.1)) ## identify which SNPs these are
 oys_rod_CADO.FDR.1
 ```
 
 ```{r}
-invisible(lapply(oys_rod_CADO.FDR.1, write, "outliers_lfmm2_CADO.txt", append=TRUE))
+invisible(lapply(oys_rod_CADO.FDR.1, write, "outliers_lfmm2_CADO_095.txt", append=TRUE))
 ```
 
 
-Now looking at the disease variable.
+**Now looking at the disease variable.**
 
 ```{r}
-oys_rod_DIS.lfmm <- lfmm_ridge(Y=gen_rod, X=DIS, K=K) ## change K as you see fit
+oys_rod_DIS.lfmm <- lfmm_ridge(Y=gen_rod, X=DIS, K=4) ## change K as you see fit
 ```
 
 ```{r}
@@ -292,13 +296,181 @@ length(which(oys_rod_DIS.qv < 0.1)) ## how many SNPs have an FDR < 10%?
 ```
 
 ```{r}
-oys_rod_DIS.FDR.1 <- which(oys_rod_DIS.qv < 0.1) ## identify which SNPs these are
+oys_rod_DIS.FDR.1 <- as.vector(which(oys_rod_DIS.qv < 0.1)) ## identify which SNPs these are
 oys_rod_DIS.FDR.1
 ```
 
 ```{r}
-invisible(lapply(oys_rod_DIS.FDR.1, write, "outliers_lfmm2_DIS.txt", append=TRUE))
+invisible(lapply(oys_rod_DIS.FDR.1, write, "outliers_lfmm2_DIS_096.txt", append=TRUE))
 ```
+
+**Now looking at the combined variable (binary).**
+
+```{r}
+oys_rod_CB.lfmm <- lfmm_ridge(Y=gen_rod, X=COMB_BIN, K=4) ## change K as you see fit
+```
+
+```{r}
+#calculating test statistics for the predictor
+oys_rod_CB.pv <- lfmm_test(Y=gen_rod, X=COMB_BIN, lfmm=oys_rod_CB.lfmm, calibrate="gif")
+
+names(oys_rod_CB.pv) # this object includes raw z-scores and p-values, as well as GIF-calibrated scores and p-values
+```
+
+```{r}
+#Looking at the genomic inflation factor (GIF) - a value around 1 means the test(s) is appropriately calibrated. Here it is 1.41.
+oys_rod_CB.pv$gif
+```
+
+An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative.
+
+```{r}
+# look at how application of the GIF to the p-values impacts the p-value distribution:
+hist(oys_rod_CB.pv$pvalue[,1], main="Unadjusted p-values")        
+hist(oys_rod_CB.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values")
+```
+
+There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers.
+
+```{r}
+# Let's change the GIF and readjust the p-values:
+zscore_rod_CB <- oys_rod_CB.pv$score[,1]   # zscores for first predictor, we only have one in our case...
+(gif_rod_CB <- oys_rod_CB.pv$gif[1])       ## d.fault GIF for this predictor
+```
+
+```{r}
+new.gif <- 1.00           ## choose your new GIF
+
+# Manual adjustment of the p-values:
+adj.pv_rod_CB <- pchisq(zscore_rod_CB^2/new.gif, df=1, lower = FALSE)
+```
+
+```{r}
+# plot the p-value histograms with the new gif
+hist(oys_rod_CB.pv$pvalue[,1], main="Unadjusted p-values")        
+hist(oys_rod_CB.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.41)")
+hist(adj.pv_rod_CB, main="REadjusted p-values (GIF=1.00)")
+```
+
+```{r}
+#convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
+# then an FDR threshold can be used to control the number of false positive detections
+oys_rod_CB.qv <- qvalue(oys_rod_CB.pv$calibrated.pvalue)$qvalues
+length(which(oys_rod_CB.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+```
+
+```{r}
+oys_rod_CB.FDR.1 <- which(oys_rod_CB.qv < 0.1) ## identify which SNPs these are
+oys_rod_CB.FDR.1
+```
+
+```{r}
+invisible(lapply(oys_rod_CB.FDR.1, write, "outliers_lfmm2_CB.txt", append=TRUE))
+```
+
+
+**Now looking at the combined variable (additive).**
+
+```{r}
+oys_rod_ADD.lfmm <- lfmm_ridge(Y=gen_rod, X=COMB_ADD, K=4) ## change K as you see fit
+```
+
+```{r}
+#calculating test statistics for the predictor
+oys_rod_ADD.pv <- lfmm_test(Y=gen_rod, X=COMB_ADD, lfmm=oys_rod_ADD.lfmm, calibrate="gif")
+
+names(oys_rod_ADD.pv) # this object includes raw z-scores and p-values, as well as GIF-calibrated scores and p-values
+```
+
+```{r}
+#Looking at the genomic inflation factor (GIF) - a value around 1 means the test(s) is appropriately calibrated. Here it is 1.29.
+oys_rod_ADD.pv$gif
+```
+
+An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative.
+
+```{r}
+# look at how application of the GIF to the p-values impacts the p-value distribution:
+hist(oys_rod_ADD.pv$pvalue[,1], main="Unadjusted p-values")        
+hist(oys_rod_ADD.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values")
+```
+
+There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers.
+
+```{r}
+# Let's change the GIF and readjust the p-values:
+zscore_rod_ADD <- oys_rod_ADD.pv$score[,1]   # zscores for first predictor, we only have one in our case...
+(gif_rod_ADD <- oys_rod_ADD.pv$gif[1])       ## d.fault GIF for this predictor
+```
+
+```{r}
+new.gif <- 1.00           ## choose your new GIF
+
+# Manual adjustment of the p-values:
+adj.pv_rod_ADD <- pchisq(zscore_rod_ADD^2/new.gif, df=1, lower = FALSE)
+```
+
+```{r}
+# plot the p-value histograms with the new gif
+hist(oys_rod_ADD.pv$pvalue[,1], main="Unadjusted p-values")        
+hist(oys_rod_ADD.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.29)")
+hist(adj.pv_rod_ADD, main="REadjusted p-values (GIF=1.00)")
+```
+
+```{r}
+#convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
+# then an FDR threshold can be used to control the number of false positive detections
+oys_rod_ADD.qv <- qvalue(oys_rod_ADD.pv$calibrated.pvalue)$qvalues
+length(which(oys_rod_ADD.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+```
+
+```{r}
+oys_rod_ADD.FDR.1 <- which(oys_rod_ADD.qv < 0.1) ## identify which SNPs these are
+oys_rod_ADD.FDR.1
+```
+
+These 12 were also identified for the combined_binary variable. The combined_binary had 95 additional outliers. We will move forward with the combined binary variable outliers, but I will keep track of these specific 12 as outliers of interest. 
+
+### Modified GIF Exploratory Analysis 
+
+With the CADO and Disease variables, outlier loci were only identified when the GIF was modified from the calculated value. As there is no documentation on how to choose a modified GIF value, I will perform exploratory analysis, examining outlier SNPs detected using different GIF values for each variable. For each variable, I'm testing 4 different GIF values. The four values were chosen based on how many outliers were identified. Basically, I was trying to find the point where there was a huge increase in the number of outliers detected and then chose values right before and after that point. 
+
+For CADO, I tested the following GIF values and report the number of outliers detected for each. Bolded values indicate the ones I chose to explore further:
+
+| GIF | # of outliers |
+|-----|---------------|
+
+
+Fist, create a file that includes the chromosome and position for each SNP index.
+
+```{bash}
+zcat SNP.TRSdp10g1.FIL.vcf.gz | mawk '!/#/' | cut -f1,2 > totalloci
+NUM=(`cat totalloci | wc -l`)
+paste <(seq 1 $NUM) totalloci > loci.plus.index
+```
+
+Now update the outlier SNP index txt files to add the chromosome and position for each SNP. I'll do this for each test file.
+
+```{bash}
+# CADO outlier files
+cat outliers_lfmm2_CADO_096.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_096.loci.txt
+
+cat outliers_lfmm2_CADO_095.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_095.loci.txt
+
+cat outliers_lfmm2_CADO_094.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_094.loci.txt
+
+cat outliers_lfmm2_CADO_09.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_09.loci.txt
+
+# Disease outlier files
+cat outliers_lfmm2_DIS_096.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_096.loci.txt
+
+cat outliers_lfmm2_DIS_093.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_093.loci.txt
+
+cat outliers_lfmm2_DIS_092.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_092.loci.txt
+
+cat outliers_lfmm2_DIS_09.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_09.loci.txt
+```
+
 
 
 ### Trying with K = 2
@@ -449,3 +621,68 @@ oys_rod_K2_DIS.FDR.1
 ```{r}
 invisible(lapply(oys_rod_K2_DIS.FDR.1, write, "outliers_lfmm2_DIS.txt", append=TRUE))
 ```
+
+**Now looking at the combined variable (binary).**
+
+```{r}
+oys_rod_CB.lfmm <- lfmm_ridge(Y=gen_rod, X=COMB_BIN, K=2) ## change K as you see fit
+```
+
+```{r}
+#calculating test statistics for the predictor
+oys_rod_CB.pv <- lfmm_test(Y=gen_rod, X=COMB_BIN, lfmm=oys_rod_CB.lfmm, calibrate="gif")
+
+names(oys_rod_CB.pv) # this object includes raw z-scores and p-values, as well as GIF-calibrated scores and p-values
+```
+
+```{r}
+#Looking at the genomic inflation factor (GIF) - a value around 1 means the test(s) is appropriately calibrated. Here it is 1.34.
+oys_rod_CB.pv$gif
+```
+
+An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative.
+
+```{r}
+# look at how application of the GIF to the p-values impacts the p-value distribution:
+hist(oys_rod_CB.pv$pvalue[,1], main="Unadjusted p-values")        
+hist(oys_rod_CB.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values")
+```
+
+There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers.
+
+```{r}
+# Let's change the GIF and readjust the p-values:
+zscore_rod_CB <- oys_rod_CB.pv$score[,1]   # zscores for first predictor, we only have one in our case...
+(gif_rod_CB <- oys_rod_CB.pv$gif[1])       ## d.fault GIF for this predictor
+```
+
+```{r}
+new.gif <- 1.00           ## choose your new GIF
+
+# Manual adjustment of the p-values:
+adj.pv_rod_CB <- pchisq(zscore_rod_CB^2/new.gif, df=1, lower = FALSE)
+```
+
+```{r}
+# plot the p-value histograms with the new gif
+hist(oys_rod_CB.pv$pvalue[,1], main="Unadjusted p-values")        
+hist(oys_rod_CB.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.34)")
+hist(adj.pv_rod_CB, main="REadjusted p-values (GIF=1.00)")
+```
+
+```{r}
+#convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
+# then an FDR threshold can be used to control the number of false positive detections
+oys_rod_CB.qv <- qvalue(oys_rod_CB.pv$calibrated.pvalue)$qvalues
+length(which(oys_rod_CB.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+```
+
+```{r}
+oys_rod_CB.FDR.1 <- which(oys_rod_CB.qv < 0.1) ## identify which SNPs these are
+oys_rod_CB.FDR.1
+```
+
+```{r}
+invisible(lapply(oys_rod_CB.FDR.1, write, "outliers_lfmm2_CB.txt", append=TRUE))
+```
+
