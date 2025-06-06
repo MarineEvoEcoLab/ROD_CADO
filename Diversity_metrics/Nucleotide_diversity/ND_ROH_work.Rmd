@@ -44,8 +44,9 @@ library(poppr)
 library(vcfR)
 library(stringr)
 library(matrixStats)
+library(purrr)
+library(scales) 
 ```
-
 
 # Nucleotide diversity
 
@@ -53,21 +54,165 @@ Nucleotide diversity (often referred to using the symbol π) is the average pair
 
 We can obtain the nucleotide diversity (π) from our VCF file using vcftools software. In our case we will collect the π value from each 10 kb (10,000 bp) window of the genome.
 
-NB: vcftools is a very flexible tool for analyzing, manipulating VCF files. It can do many other wonderful things. The vcftools manual is on github here.
+NB: vcftools is a very flexible tool for analyzing, manipulating VCF files. It can do many other wonderful things. The vcftools manual is on github here (https://vcftools.sourceforge.net/man_latest.html).
+
+### Breaking up pi by treatment type?
+
+I believe that an important step would be to compare nucleotide diversity between the different treatment groups. The following code present information for all treatment groups and compares it to each individual treatment group.
 
 ## Start of modified workflow
+
+## Setup 
+
+The following was run on the command line
+```{bash}
+# Make ROD_CADO_working directory in home
+mkdir ROD_CADO_working
+cd ROD_CADO_working
+# Make Nucleotide_diversity directory
+mkdir ROD_CADO_working
+# create popmap file with sample and treatment names
+cp /home/Shared_Data/ROD_CADO/analysis/popmap popmap
+# manually add in treatment names to popmap file (w/ code)
+head treat_popmap 
+```
+C1_2    con-con
+C1_4    con-con
+C1_5    con-con
+C1_6    con-con
+C1_7    con-con
+C1_8    con-con
+C1_9    con-con
+C2_10   con-con
+C2_11   con-con
+C2_2    con-con
+
+# Subsetting popmap groups
+Create treatment specific files containing a single column of all of the sample names within that treatment
+```{bash}
+awk '$2 == "con-con" {print $1}' treat_popmap > con-con.txt | awk '$2 == "str-con" {print $1}' treat_popmap > str-con.txt | awk '$2 == "con-rod" {print $1}' treat_popmap > con-rod.txt | awk '$2 == "str-rod" {print $1}' treat_popmap > str-rod.txt
+```
 
 ### Run VCF tools PI window
 ```{bash eval = FALSE}
 #bcftools view --threads 20 -S SNP.TRSdp10g1.FIL.vcf | vcftools --vcf -  --window-pi 10000 --out ROD.CADO.all.pi
-vcftools --vcf SNP.TRSdp10g1.FIL.vcf --window-pi 10000 --out ROD.CADO.all.pi
+
+# For con-con
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --keep con-con.txt --recode --recode-INFO-all --out temp_concon_filtered
+
+# Step 2: bgzip output
+bgzip temp_concon_filtered.recode.vcf
+
+# Step 3: Calculate windowed pi
+vcftools --gzvcf temp_concon.filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.con-con.pi.windowed.pi
+
+# For str-con
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --keep popmap_files/str-con.txt --recode --recode-INFO-all --out temp_strcon_filtered
+
+# Step 2: bgzip output
+bgzip temp_strcon_filtered.recode.vcf
+
+# Step 3: # Step 3: Calculate windowed pi
+vcftools --gzvcf temp_strcon_filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.str-con.pi.windowed.pi
+
+# For con-rod
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf --keep popmap_files/con-rod.txt --recode --recode-INFO-all --out temp_conrod_filtered
+
+# Step 2: bgzip output
+bgzip temp_conrod_filtered.recode.vcf
+
+# Step 3: Calculate windowed pi
+vcftools --gzvcf temp_conrod_filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.con-rod.pi.windowed.pi
+
+# For str-rod
+# Step 1: Filter VCF for population subset
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf --keep popmap_files/str-rod.txt --recode --recode-INFO-all --out temp_strrod_filtered
+
+# Step 2: bgzip output
+bgzip temp_strrod_filtered.recode.vcf
+
+# Step 3: Calculate windowed pi
+vcftools --gzvcf temp_strrod_filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.str-rod.pi.windowed.pi
+```
+
+### Make loop with help from ChatGPT
+
+#### Make script
+
+```{bash}
+#!/bin/bash
+
+VCF=SNP.TRSdp10g1.FIL.vcf.gz
+POPS=("con-con" "str-con" "con-rod" "str-rod")
+
+for POP in "${POPS[@]}"; do
+    echo "Processing $POP..."
+
+    KEEP="popmap_files/${POP}.txt"
+    OUT_PREFIX="temp_${POP//-}"
+    REC_VCF="${OUT_PREFIX}.recode.vcf"
+    REC_VCFGZ="${REC_VCF}.gz"
+    OUTPUT_PI="ROD.CADO.${POP}.pi.windowed.pi"
+
+    # Step 1: Filter and recode
+    vcftools --gzvcf "$VCF" \
+        --keep "$KEEP" \
+        --recode --recode-INFO-all \
+        --out "$OUT_PREFIX"
+
+    # Step 2: Compress VCF and remove uncompressed
+    bgzip "$REC_VCF"
+    rm "$REC_VCF"
+
+    # Step 3: Calculate windowed pi
+    vcftools --gzvcf "$REC_VCFGZ" \
+        --window-pi 10000 \
+        --out "$OUTPUT_PI"
+
+    # Step 4: Clean up compressed VCF
+    rm "$REC_VCFGZ"
+
+    echo "Finished processing $POP"
+    echo "---------------------------"
+done
+```
+
+#### Make executable
+
+```{bash}
+chmod +x run_pi_calculations.sh
+```
+
+#### Run in tmux
+```{bash}
+# Run in tmux
+tmux new -s pi_calc
+# Reattach later
+tmux attach-session -t pi_calc
 ```
 
 ### Load dataframe
 ```{r, message=FALSE, warning=FALSE}
-pi.all.dataframe<-read.table("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/ROD.CADO.all.pi", sep="\t", header=T)
+pi.all.dataframe<-read.table("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/ROD.CADO.all.pi.windowed.pi", sep="\t", header=T)
+pi.concon.dataframe<-read.table("/home/jgreen/ROD_CADO_working/Nucleotide_diversity/ROD.CADO.con-con.pi.windowed.pi.windowed.pi", sep="\t", header=T)
+pi.conrod.dataframe<-read.table("/home/jgreen/ROD_CADO_working/Nucleotide_diversity/ROD.CADO.con-rod.pi.windowed.pi.windowed.pi", sep="\t", header=T)
+pi.strcon.dataframe<-read.table("/home/jgreen/ROD_CADO_working/Nucleotide_diversity/ROD.CADO.str-con.pi.windowed.pi.windowed.pi", sep="\t", header=T)
+pi.strrod.dataframe<-read.table("/home/jgreen/ROD_CADO_working/Nucleotide_diversity/ROD.CADO.str-rod.pi.windowed.pi.windowed.pi", sep="\t", header=T)
 ```
 
+### Color palette
+```{r}
+#Here is the color pallette that we will use for everything:
+
+col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")
+
+#Let's factor treatments as follows:
+
+df$TREAT <- factor(df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
+```
 
 ### Modify CHROM column in dataframe
 ```{r, message=FALSE, warning=FALSE}
@@ -81,18 +226,262 @@ pi.all.dataframe %>%
   mutate(CHROM = str_replace(CHROM, "NC_035786.1", "7")) %>% 
   mutate(CHROM = str_replace(CHROM, "NC_035787.1", "8")) %>%
   mutate(CHROM = str_replace(CHROM, "NC_035788.1", "9")) %>% 
-  mutate(CHROM = str_replace(CHROM, "NC_035789.1", "10"))  -> mydf
-mydf$CHROM <- as.factor(mydf$CHROM)
+  mutate(CHROM = str_replace(CHROM, "NC_035789.1", "10"))  -> pi.all.df
+pi.all.df$CHROM <- as.factor(pi.all.df$CHROM)
+
+pi.concon.dataframe %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035780.1", "1")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035781.1", "2")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035782.1", "3")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035783.1", "4")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035784.1", "5")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035785.1", "6")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035786.1", "7")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035787.1", "8")) %>%
+  mutate(CHROM = str_replace(CHROM, "NC_035788.1", "9")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035789.1", "10"))  -> pi.concon.df
+pi.concon.df$CHROM <- as.factor(pi.concon.df$CHROM)
+
+pi.conrod.dataframe %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035780.1", "1")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035781.1", "2")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035782.1", "3")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035783.1", "4")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035784.1", "5")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035785.1", "6")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035786.1", "7")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035787.1", "8")) %>%
+  mutate(CHROM = str_replace(CHROM, "NC_035788.1", "9")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035789.1", "10"))  -> pi.conrod.df
+pi.conrod.df$CHROM <- as.factor(pi.conrod.df$CHROM)
+
+pi.strcon.dataframe %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035780.1", "1")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035781.1", "2")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035782.1", "3")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035783.1", "4")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035784.1", "5")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035785.1", "6")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035786.1", "7")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035787.1", "8")) %>%
+  mutate(CHROM = str_replace(CHROM, "NC_035788.1", "9")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035789.1", "10"))  -> pi.strcon.df
+pi.strcon.df$CHROM <- as.factor(pi.strcon.df$CHROM)
+
+pi.strrod.dataframe %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035780.1", "1")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035781.1", "2")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035782.1", "3")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035783.1", "4")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035784.1", "5")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035785.1", "6")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035786.1", "7")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035787.1", "8")) %>%
+  mutate(CHROM = str_replace(CHROM, "NC_035788.1", "9")) %>% 
+  mutate(CHROM = str_replace(CHROM, "NC_035789.1", "10"))  -> pi.strrod.df
+pi.strrod.df$CHROM <- as.factor(pi.strrod.df$CHROM)
+```
+
+### For loop to replace previous dataframe manipulation
+
+```{r, message=FALSE, warning=FALSE}
+
+# Create named vector to map chromosome names
+chrom_map <- setNames(as.character(1:10), paste0("NC_03578", 0:9, ".1"))
+
+# List of original dataframe names (as strings)
+input_names <- c(
+  "pi.all.dataframe",
+  "pi.concon.dataframe",
+  "pi.conrod.dataframe",
+  "pi.strcon.dataframe",
+  "pi.strrod.dataframe"
+)
+
+# Corresponding output dataframe names
+output_names <- c(
+  "pi.all.df",
+  "pi.concon.df",
+  "pi.conrod.df",
+  "pi.strcon.df",
+  "pi.strrod.df"
+)
+
+# Loop through each dataframe
+for (i in seq_along(input_names)) {
+  df <- get(input_names[i])  # retrieve the dataframe by name
+  
+  # Replace chromosome names
+  for (old in names(chrom_map)) {
+    df <- df %>% mutate(CHROM = str_replace(CHROM, old, chrom_map[[old]]))
+  }
+  
+  # Convert to factor
+  df$CHROM <- as.factor(df$CHROM)
+  
+  # Assign to new name in global environment
+  assign(output_names[i], df)
+}
+```
+
+
+### Descriptive statistics
+```{r}
+summary(pi.all.df)
+by(pi.all.df, pi.all.df$CHROM, summary)
+cor(pi.all.df$N_VARIANTS, pi.all.df$PI)
+
+summary(pi.concon.df)
+by(pi.concon.df, pi.concon.df$CHROM, summary)
+cor(pi.concon.df$N_VARIANTS, pi.concon.df$PI)
+
+summary(pi.conrod.df)
+by(pi.conrod.df, pi.conrod.df$CHROM, summary)
+cor(pi.conrod.df$N_VARIANTS, pi.conrod.df$PI)
+
+summary(pi.strcon.df)
+by(pi.strcon.df, pi.strcon.df$CHROM, summary)
+cor(pi.strcon.df$N_VARIANTS, pi.strcon.df$PI)
+
+summary(pi.strrod.df)
+by(pi.strrod.df, pi.strrod.df$CHROM, summary)
+cor(pi.strrod.df$N_VARIANTS, pi.strrod.df$PI)
+```
+
+### New loop and plotting for statistics
+
+```{r}
+col_pal <- c(
+  "ALL" = "gray70",
+  "CONCON" = "#0072B2", 
+  "STRCON" = "#56B4E9", 
+  "CONROD" = "#E69F00", 
+  "STRROD" = "#F0E442"
+)
+
+df_names <- c("pi.all.df", "pi.concon.df", "pi.strcon.df", "pi.conrod.df", "pi.strrod.df")
+df_labels <- c("ALL", "CONCON", "STRCON", "CONROD", "STRROD")
+chrom_levels <- as.character(1:10)
+
+summary_list <- list()
+
+for (i in seq_along(df_names)) {
+  df <- get(df_names[i])
+  treat <- df_labels[i]
+  
+  df$TREAT <- factor(treat, levels = names(col_pal))
+  
+  chrom_summary <- df %>%
+    group_by(CHROM, TREAT) %>%
+    summarise(
+      mean_PI = mean(PI, na.rm = TRUE),
+      se_PI = sd(PI, na.rm = TRUE) / sqrt(n()),
+      mean_N_VARIANTS = mean(N_VARIANTS, na.rm = TRUE),
+      se_N_VARIANTS = sd(N_VARIANTS, na.rm = TRUE) / sqrt(n()),
+      .groups = "drop"
+    ) %>%
+    mutate(CHROM = factor(CHROM, levels = chrom_levels))
+  
+  summary_list[[i]] <- chrom_summary
+}
+
+summary_df <- bind_rows(summary_list)
+
+mean_pi_plot <- ggplot(summary_df, aes(x = CHROM, y = mean_PI, fill = TREAT)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(ymin = mean_PI - se_PI, ymax = mean_PI + se_PI),
+                position = position_dodge(width = 0.8), width = 0.2) +
+  scale_fill_manual(values = col_pal, name = "Treatment") +
+  labs(title = "Mean PI per Chromosome", x = "Chromosome", y = "Mean PI") +
+  theme_minimal()
+
+mean_n_plot <- ggplot(summary_df, aes(x = CHROM, y = mean_N_VARIANTS, fill = TREAT)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(ymin = mean_N_VARIANTS - se_N_VARIANTS, ymax = mean_N_VARIANTS + se_N_VARIANTS),
+                position = position_dodge(width = 0.8), width = 0.2) +
+  scale_fill_manual(values = col_pal, name = "Treatment") +
+  labs(title = "Mean number of variants per Chromosome", x = "Chromosome", y = "Mean # variants") +
+  theme_minimal()
+
+print(mean_pi_plot)
+print(mean_n_plot)
+
+ggsave("mean_pi_plot.png", plot = mean_pi_plot, width = 10, height = 6, dpi = 300)
+ggsave("mean_n_variants_plot.png", plot = mean_n_plot, width = 10, height = 6, dpi = 300)
+
+```
+
+# Correlation visualizations
+```{r}
+for (i in seq_along(df_names)) {
+  df <- get(df_names[i])
+  label <- df_labels[i]
+  
+  p <- ggplot(df, aes(x = N_VARIANTS, y = PI)) +
+    geom_point(alpha = 0.4) +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +
+    labs(title = paste("Correlation: PI vs # variants —", label),
+         x = "N_VARIANTS",
+         y = "PI") +
+    theme_minimal()
+  
+  print(p)
+}
+```
+
+### Table of correlations
+
+```{r}
+cor_table <- tibble(
+  dataset = df_labels,
+  correlation = map_dbl(df_names, ~ cor(get(.x)$N_VARIANTS, get(.x)$PI, use = "complete.obs"))
+)
+
+print(cor_table)
 ```
 
 ### Plot PI by chromosome
 ```{r, message=FALSE, warning=FALSE}
-ggplot(mydf, aes(x=CHROM, y=PI,))+
+ggplot(pi.all.df, aes(x=CHROM, y=PI,))+
   geom_violin(aes(color=CHROM,fill=CHROM))+
   geom_boxplot(aes(fill=CHROM), width=0.1,outlier.shape = 23, outlier.color = "black")+
   stat_summary(fun=mean, geom="point", shape=23, size=2)+
   scale_fill_brewer(palette = "Paired")+
   theme_classic()
+```
+
+### Plot PI by chromosome loop
+
+```{r}
+# List of dataframes and labels
+df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
+df_labels <- c("All", "ConCon", "ConRod", "StrCon", "StrRod")
+
+# Standard chromosome order
+chrom_levels <- as.character(1:10)
+
+# Combine all into one dataframe
+combined_df <- purrr::map2_dfr(df_names, df_labels, function(df_name, label) {
+  df <- get(df_name)
+  df %>%
+    mutate(
+      dataset = label,
+      CHROM = factor(CHROM, levels = chrom_levels)
+    )
+})
+
+# Faceted violin + boxplot
+ggplot(combined_df, aes(x = CHROM, y = PI)) +
+  geom_violin(aes(color = CHROM, fill = CHROM), trim = FALSE) +
+  geom_boxplot(aes(fill = CHROM), width = 0.1, outlier.shape = 23, outlier.color = "black") +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2) +
+  scale_fill_brewer(palette = "Paired") +
+  labs(title = "PI Distribution by Chromosome (Faceted by Dataset)",
+       x = "Chromosome", y = "PI") +
+  facet_wrap(~ dataset, ncol = 2) +
+  theme_classic() +
+  theme(legend.position = "none")
+
 ```
 
 ### Smaller visualizations
@@ -104,12 +493,112 @@ boxplot(mydf$PI, ylab="Nuc Diversity")
 
 ### Plot By position
 ```{r, message=FALSE, warning=FALSE}
-ggplot(mydf, aes(x=BIN_START, y=PI, color=CHROM))+
+ggplot(pi.all.df, aes(x=BIN_START, y=PI, color=CHROM))+
   geom_point()+
+  scale_fill_brewer(palette = "Paired") +
+  scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +
   facet_wrap(~CHROM)+
   theme_classic()
 ```
+### Loop for plot by position
+```{r}
+# Define dataframe names and labels
+df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
+df_labels <- c("ALL", "CONCON", "CONROD", "STRCON", "STRROD")
 
+# Get global PI range
+all_pi_values <- unlist(lapply(df_names, function(x) get(x)$PI))
+global_ymin <- min(all_pi_values, na.rm = TRUE)
+global_ymax <- max(all_pi_values, na.rm = TRUE)
+
+# Loop over dataframes
+for (i in seq_along(df_names)) {
+  df <- get(df_names[i])
+  label <- df_labels[i]
+  
+  # Ensure CHROM is a factor ordered from 1 to 10
+  df$CHROM <- factor(df$CHROM, levels = as.character(1:10))
+  
+  p <- ggplot(df, aes(x = BIN_START, y = PI, color = CHROM)) +
+    geom_point() +
+    facet_wrap(~CHROM) +
+    scale_fill_brewer(palette = "Paired") +
+    scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +  # Human readable x-axis
+    ylim(global_ymin, global_ymax) +  # Same y-axis for all plots
+    theme_classic() +
+    labs(title = paste("PI vs BIN_START -", label),
+         x = "BIN_START (millions)",
+         y = "PI")
+  
+  print(p)
+  
+  ggsave(filename = paste0("PI_vs_BIN_START_", label, ".png"),
+         plot = p, width = 10, height = 6, dpi = 300)
+}
+
+```
+
+### Facet wrap chromosome showing them across different treatment types
+```{r}
+# Define dataframe names and labels
+df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
+df_labels <- c("ALL", "CONCON", "CONROD", "STRCON", "STRROD")
+
+# Custom color palette
+col_pal <- c(
+  "ALL" = "gray70",
+  "CONCON" = "#0072B2", 
+  "STRCON" = "#56B4E9", 
+  "CONROD" = "#E69F00", 
+  "STRROD" = "#F0E442"
+)
+
+# Combine all data into one dataframe with treatment labels
+all_data <- bind_rows(lapply(seq_along(df_names), function(i) {
+  df <- get(df_names[i])
+  df$Treatment <- df_labels[i]
+  df
+}))
+
+# Set CHROM and Treatment as ordered factors
+all_data$CHROM <- factor(all_data$CHROM, levels = as.character(1:10))
+all_data$Treatment <- factor(all_data$Treatment, levels = df_labels)
+
+# Get global PI range
+global_ymin <- min(all_data$PI, na.rm = TRUE)
+global_ymax <- max(all_data$PI, na.rm = TRUE)
+
+# Loop through chromosomes 1 to 10
+for (chr in 1:10) {
+  chr_str <- as.character(chr)
+  chr_data <- filter(all_data, CHROM == chr_str)
+  
+  p <- ggplot(chr_data, aes(x = BIN_START, y = PI, color = Treatment)) +
+    geom_point(alpha = 0.6, size = 0.5) +
+    facet_wrap(~Treatment, nrow = 1) +
+    scale_color_manual(values = col_pal) +
+    scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) +
+    ylim(global_ymin, global_ymax) +
+    theme_classic() +
+    labs(
+      title = paste("Chromosome", chr, "- PI across Treatment Types"),
+      x = "BIN_START (millions)",
+      y = "PI"
+    )
+  
+  print(p)
+  
+  ggsave(
+    filename = paste0("PI_chr", chr, "_across_treatments.png"),
+    plot = p,
+    width = 16,
+    height = 4,
+    dpi = 300
+  )
+}
+
+```
+### Only chromosome 1
 ```{r, message=FALSE, warning=FALSE}
 # Subset by chrom
 mydf.chr1 <- mydf[which(mydf$CHROM=="1"),]
@@ -120,26 +609,37 @@ ggplot(mydf.chr1, aes(x=BIN_START, y=PI))+
 ```
 
 ```{r}
-# Create an empty list to store the plots
-plot_list <- list()
+# List of treatment data frames and their labels
+df_names <- c("pi.all.df", "pi.concon.df", "pi.conrod.df", "pi.strcon.df", "pi.strrod.df")
+df_labels <- c("ALL", "CONCON", "CONROD", "STRCON", "STRROD")
 
-# Loop through chromosomes 1 to 10
-for (i in 1:10) {
-  chr_data <- mydf[which(mydf$CHROM == as.character(i)), ]
+# Step 1: Calculate global PI range across all dataframes
+all_pi_values <- unlist(lapply(df_names, function(x) get(x)$PI))
+global_ymin <- min(all_pi_values, na.rm = TRUE)
+global_ymax <- max(all_pi_values, na.rm = TRUE)
+
+# Step 2: Create plots and save as PNGs
+for (j in seq_along(df_names)) {
+  df <- get(df_names[j])
+  label <- df_labels[j]
   
-  p <- ggplot(chr_data, aes(x = BIN_START, y = PI)) +
-    geom_point() +
-    theme_classic() +
-    ggtitle(paste("Chromosome", i))
-  
-  # Store the plot in the list
-  plot_list[[paste0("chr", i)]] <- p
+  for (i in 1:10) {
+    chr_data <- df[df$CHROM == as.character(i), ]
+    
+    p <- ggplot(chr_data, aes(x = BIN_START, y = PI)) +
+      geom_point() +
+      theme_classic() +
+      ggtitle(paste("Treatment:", label, "- Chromosome", i)) +
+      labs(x = "BIN_START", y = "PI") +
+      ylim(global_ymin, global_ymax)
+    
+    filename <- paste0("PI_", label, "_chr", i, ".png")
+    ggsave(filename = filename, plot = p, width = 8, height = 5, dpi = 300)
+  }
 }
 
-# To display one of the plots, for example:
-print(plot_list[["chr3"]])
-
 ```
+
 
 # Runs of homozygosity
 
@@ -151,7 +651,7 @@ This technique can be used to identify the genomic footprint of inbreeding in co
 
 ## Start ROH workflow
 
-```{bash }
+```{bash}
 vcftools --vcf SNP.TRSdp10g1.FIL.vcf --LROH --out ROD.CADO.all.LROH
 ```
 

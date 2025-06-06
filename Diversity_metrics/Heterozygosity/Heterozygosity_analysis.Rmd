@@ -1,0 +1,141 @@
+---
+title: "Heterozygosity"
+author: "Coline Caillon"
+date: '2025-04-30'
+output: github_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Jon's code: 
+https://github.com/The-Eastern-Oyster-Genome-Project/2024_Eastern_Oyster_Population_Genomics/blob/main/Oyster_Genome_Population_Genomic_Analysis.md#heterozygosity
+
+# Set up working directory and create symbolic link to the compressed VCF file
+
+```{bash}
+cd /home/ccaillon/
+mkdir ROD_CADO_CC_working
+cd ROD_CADO_CC_working
+ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz filtered.vcf.gz
+```
+
+```{bash}
+# create popmap file with sample and treatment names
+cd /home/ccaillon/ROD_CADO_CC_working
+mkdir popmap_files
+cd popmap_files
+cp /home/Shared_Data/ROD_CADO/analysis/popmap treat_popmap
+#add in treatment names to popmap file (w/ code)
+head treat_popmap 
+```
+
+#Create treatment specific files containing a single column of all of the sample names within that treatment
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/popmap_files
+
+#Rename treatments
+awk '$2 ~ /^C[123]$/ { $2 = "CONCON" } 
+$2 ~ /^R[123]$/ { $2 = "CONROD" }
+$2 ~ /^CH[123]$/ { $2 = "STRCON" }
+$2 ~ /^RH[123]$/ { $2 = "STRROD" }
+{ print }' treat_popmap > treat_popmap_renamed
+
+awk '$2 == "CONCON" {print $1}' treat_popmap_renamed > CONCON.txt
+awk '$2 == "STRCON" {print $1}' treat_popmap_renamed > STRCON.txt
+awk '$2 == "CONROD" {print $1}' treat_popmap_renamed > CONROD.txt
+awk '$2 == "STRROD" {print $1}' treat_popmap_renamed > STRROD.txt
+```
+
+#Subset the VCF by treatment and calculate heterozygosity for each treatment
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/
+mkdir -p treat_heterozygosity  # -p prevents error if directory exists
+
+# CONCON
+samples=$(cat popmap_files/CONCON.txt)
+INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
+BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
+  { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
+popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/CONCON.het
+
+```
+
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/
+mkdir -p treat_heterozygosity  # -p prevents error if directory exists
+
+# CONROD
+samples=$(cat popmap_files/CONROD.txt)
+INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
+BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
+  { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
+popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/CONROD.het
+
+# STRCON
+samples=$(cat popmap_files/STRCON.txt)
+INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
+BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
+  { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
+popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/STRCON.het
+
+# STRROD
+samples=$(cat popmap_files/STRROD.txt)
+INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
+BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
+  { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
+popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/STRROD.het
+
+```
+
+
+
+```{bash}
+
+# CON-CON
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONCON"}' ./treat_het/con-con.het) > ./treat_het/con-con-treat.het
+
+# STR-CON
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRCON"}' ./treat_het/str-con.het) > ./treat_het/str-con-treat.het
+
+# CON-ROD
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONROD"}' ./treat_het/con-rod.het) > ./treat_het/con-rod-treat.het
+
+# STR-ROD
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_het/str-rod.het) > ./treat_het/str-rod-treat.het
+
+mkdir -p ./Output/Heterozygosity
+cp con-con-treat.het str-con-treat.het con-rod-treat.het str-rod-treat.het ./Output/Heterozygosity
+```
+
+
+## Plotting 
+```{r}
+library(ggplot2)
+col_pal <- c("#0072B2", "#56B4E9", "#E69F00", "#F0E442")
+# df$TREAT <- factor(df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
+```
+
+
+
+
+
+
+# Load requiered libraries
+
+library(vcfR)   # for reading VCF files
+library(dplyr)  # for data manipulation
+
+# Set paths
+vcf_path <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz"
+output <- "~/ROD_CADO/Diversity_metrics/Heterozygosity_cc"  # directory to save results
+
+# Read VCF file
+vcf <- read.vcfR(vcf_path)
+
+
+
+
+
