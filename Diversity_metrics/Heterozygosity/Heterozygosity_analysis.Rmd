@@ -95,19 +95,19 @@ popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "
 ```{bash}
 
 # CON-CON
-cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONCON"}' ./treat_het/con-con.het) > ./treat_het/con-con-treat.het
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONCON"}' ./treat_heterozygosity/CONCON.het) > ./treat_heterozygosity/CONCON-treat.het
 
 # STR-CON
-cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRCON"}' ./treat_het/str-con.het) > ./treat_het/str-con-treat.het
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRCON"}' ./treat_heterozygosity/STRCON.het) > ./treat_heterozygosity/STRCON-treat.het
 
 # CON-ROD
-cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONROD"}' ./treat_het/con-rod.het) > ./treat_het/con-rod-treat.het
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONROD"}' ./treat_heterozygosity/CONROD.het) > ./treat_heterozygosity/CONROD-treat.het
 
 # STR-ROD
-cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_het/str-rod.het) > ./treat_het/str-rod-treat.het
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_heterozygosity/STRROD.het) > ./treat_heterozygosity/STRROD-treat.het
 
 mkdir -p ./Output/Heterozygosity
-cp con-con-treat.het str-con-treat.het con-rod-treat.het str-rod-treat.het ./Output/Heterozygosity
+cp CONCON-treat.het STRCON-treat.het CONROD-treat.het STRROD-treat.het ./Output/Heterozygosity
 ```
 
 
