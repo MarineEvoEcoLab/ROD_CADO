@@ -21,15 +21,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 #Load library
 library(pcadapt)
-# Use vcf2pcadapt to convert file type
-#vcf2pcadapt("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.sub1.vcf", output = "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/tmp.pcadapt", allele.sep = c("/", "|"))
 ```
 
 # Set path to file and load data to filename variable
 
 ```{r}
 #Set path to file
-path_to_file <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/Final.filtered.bed"
+path_to_file <- "/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/TRSdp10g1.FIL.bed"
 #Load file to filename variable
 filename <- read.pcadapt(path_to_file, type = "bed")
 ```
@@ -42,7 +40,7 @@ plot(res, option = "screeplot")
 
 # Add popnames
 ```{r}
-table <- read.table("/home/Shared_Data/ROD_CADO/analysis/popmap", header = FALSE)
+table <- read.table("/home/jgreen/ROD_CADO_working/Nucleotide_diversity/popmap_files/treat_popmap", header = FALSE)
 poplist.names <- table[,2]
 poplist.names
 
@@ -65,25 +63,53 @@ plot(res$loadings[, 1], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
 # Dealing with Linkage using LD clumping
 
 ```{r}
-res <- pcadapt(filename, K = 10, LD.clumping = list(size = 500, thr = 0.2))
-plot(res, option = "screeplot")
+resld <- pcadapt(filename, K = 10, LD.clumping = list(size = 500, thr = 0.2))
+plot(resld, option = "screeplot")
 ```
 
 ## Investigate loadings within the context for LD
 
 ```{r}
-res <- pcadapt(filename, K = 4, LD.clumping = list(size = 500, thr = 0.2))
-par(mfrow = c(2, 2))
-for (i in 1:4)
-  plot(res$loadings[, i], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+resld <- pcadapt(filename, K = 2, LD.clumping = list(size = 500, thr = 0.2))
+par(mfrow = c(1, 1))
+for (i in 1:2)
+  plot(resld$loadings[, i], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
 ```
 
 
 ## Plot PCA
 
 ```{r}
-plot(res, option = "scores", pop = poplist.names)
+plot(resld, option = "scores", pop = poplist.names)
 ```
 
 Main groupings that we see are seemingly group by family and not by treatment. We might not see treatment groupings looking at all SNPS, but may potentially see treatment groupings as we begin to select for outlier loci. 
 
+### Manhattan Plot
+
+
+```{r}
+plot(res , option = "manhattan")
+plot(resld , option = "manhattan")
+```
+
+### Q-Q plot
+
+```{r}
+plot(res, option = "qqplot")
+plot(resld, option= "qqplot")
+```
+
+### Histograms of the test statistic and of the p-values
+
+```{r}
+hist(res$pvalues, xlab = "p-values", main = NULL, breaks = 50, col = "blue")
+hist(resld$pvalues, xlab = "p-values", main = NULL, breaks = 50, col = "blue")
+```
+
+### Stats distribution
+
+```{r}
+plot(res, option = "stat.distribution")
+plot(resld, option = "stat.distribution")
+```
