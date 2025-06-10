@@ -138,7 +138,7 @@ bgzip temp_strrod_filtered.recode.vcf
 vcftools --gzvcf temp_strrod_filtered.recode.vcf.gz --window-pi 10000 --out ROD.CADO.str-rod.pi.windowed.pi
 ```
 
-### Make loop with help from ChatGPT
+### Make script with loop using ChatGPT
 
 #### Make script
 
