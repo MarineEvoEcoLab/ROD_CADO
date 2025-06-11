@@ -110,7 +110,7 @@ INDS=$(seq -s, 0 19)
 popStats -y GT --file <( bcftools view --threads 40 ./filtered.vcf.gz) -t $INDS > ./treat_heterozygosity/test.het
 ```
 
-
+#Add column with treatement file for each .het file
 ```{bash}
 cd /home/ccaillon/ROD_CADO_CC_working/
 
