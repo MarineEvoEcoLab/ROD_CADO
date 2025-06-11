@@ -111,8 +111,8 @@ popStats -y GT --file <( bcftools view --threads 40 ./filtered.vcf.gz) -t $INDS 
 ```
 
 
-
 ```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/
 
 # CON-CON
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tCONCON"}' ./treat_heterozygosity/CONCON.het) > ./treat_heterozygosity/CONCON-treat.het
@@ -125,10 +125,11 @@ cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '
 
 # STR-ROD
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_heterozygosity/STRROD.het) > ./treat_heterozygosity/STRROD-treat.het
-
-mkdir -p ./Output/Heterozygosity
-cp CONCON-treat.het STRCON-treat.het CONROD-treat.het STRROD-treat.het ./Output/Heterozygosity
 ```
+
+
+
+
 
 
 ## Plotting 
