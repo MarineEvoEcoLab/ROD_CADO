@@ -61,12 +61,6 @@ BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
   { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
 popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/CONCON.het
 
-```
-
-```{bash}
-cd /home/ccaillon/ROD_CADO_CC_working/
-mkdir -p treat_heterozygosity  # -p prevents error if directory exists
-
 # CONROD
 samples=$(cat popmap_files/CONROD.txt)
 INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
@@ -80,19 +74,6 @@ INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
 BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
   { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
 popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/STRCON.het
-
-# STRROD
-samples=$(cat popmap_files/STRROD.txt)
-INDS=$(bcftools query -l ./filtered.vcf.gz | awk -v samples="$samples" '
-BEGIN { split(samples, arr, "\n"); for (i in arr) sample_map[arr[i]] }
-  { if ($0 in sample_map) printf "%s,", NR-1 }' | sed 's/,$//')
-popStats -y GT --file <(bcftools view --threads 40 ./filtered.vcf.gz) --target "$INDS" > ./treat_heterozygosity/STRROD.het
-
-```
-
-```{bash}
-cd /home/ccaillon/ROD_CADO_CC_working/
-mkdir -p treat_heterozygosity
 
 # STRROD
 samples=$(cat popmap_files/STRROD.txt)
