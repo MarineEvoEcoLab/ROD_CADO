@@ -21,6 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 #Load library
 library(pcadapt)
+library(qvalue)
 ```
 
 # Set path to file and load data to filename variable
@@ -49,15 +50,18 @@ plot(res, option = "scores", pop = poplist.names)
 
 # Analyze loadings
 ```{r}
-par(mfrow = c(2, 2))
-for (i in 1:4)
+par(mfrow = c(3, 2))
+for (i in 1:5)
   plot(res$loadings[, i], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
 ```
 
-# Investigate PC1
+# Investigate PC1, PC2, and PC5
 
 ```{r}
 plot(res$loadings[, 1], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+plot(res$loadings[, 2], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+plot(res$loadings[, 5], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+
 ```
 
 # Dealing with Linkage using LD clumping
@@ -70,9 +74,9 @@ plot(resld, option = "screeplot")
 ## Investigate loadings within the context for LD
 
 ```{r}
-resld <- pcadapt(filename, K = 2, LD.clumping = list(size = 500, thr = 0.2))
+resld <- pcadapt(filename, K = 4, LD.clumping = list(size = 500, thr = 0.2))
 par(mfrow = c(1, 1))
-for (i in 1:2)
+for (i in 1:4)
   plot(resld$loadings[, i], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
 ```
 
@@ -112,4 +116,28 @@ hist(resld$pvalues, xlab = "p-values", main = NULL, breaks = 50, col = "blue")
 ```{r}
 plot(res, option = "stat.distribution")
 plot(resld, option = "stat.distribution")
+```
+
+### Set q-value cutoff
+
+```{r}
+# LD clumping pcadapt dataset
+qval <- qvalue(resld$pvalues)$qvalues
+alpha <- 0.01
+outliersld <- which(qval < alpha)
+length(outliersld)
+# Save outliers to .txt file 
+invisible(lapply(outliersld, write, "outliers_pcadapt_thinned_alpha01.txt", append=TRUE))
+```
+
+### Convert pcadapt SNPs into locations
+
+```{r}
+# Convert SNP indices to locus position and chromosome info
+cut -f 1,4 TRSdp10g1.FIL2.bim > /home/jgreen/ROD_CADO/PCA_analysis/TRSdp10g1.FIL2.pos 
+NUM=(`cat TRSdp10g1.FIL2.pos | wc -l`)
+paste <(seq 1 $NUM) TRSdp10g1.FIL2.pos > TRSdp10g1.FIL2.pos.index
+
+#pcadapt outliers 
+cat outliers_pcadapt_thinned_alpha01.txt | parallel "grep -w ^{} TRSdp10g1.FIL2.pos.index" | cut -f 2,3 > outlier_pcadapt_thinned_alpha01.loci.txt
 ```
