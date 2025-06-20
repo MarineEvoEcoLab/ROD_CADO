@@ -204,7 +204,7 @@ zscore_rod_CADO <- oys_rod_CADO.pv$score[,1]   # zscores for first predictor, we
 ```
 
 ```{r}
-new.gif <- 0.95           ## choose your new GIF
+new.gif <- 1.41           ## choose your new GIF
 
 # Manual adjustment of the p-values:
 adj.pv_rod_CADO <- pchisq(zscore_rod_CADO^2/new.gif, df=1, lower = FALSE)
@@ -214,7 +214,7 @@ adj.pv_rod_CADO <- pchisq(zscore_rod_CADO^2/new.gif, df=1, lower = FALSE)
 # plot the p-value histograms with the new gif
 hist(oys_rod_CADO.pv$pvalue[,1], main="Unadjusted p-values")        
 hist(oys_rod_CADO.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.08)")
-hist(adj.pv_rod_CADO, main="REadjusted p-values (GIF=0.95)")
+hist(adj.pv_rod_CADO, main="REadjusted p-values (GIF=1.41)")
 ```
 
 An FDR of 10% is usually standard to identify outliers. The FDR threshold can be used to adjust for false positives. q-values represent each SNP’s significance, taking into account the fact that thousands of SNPs are being tested. The steps below establish an FDR threshold. 
@@ -238,7 +238,7 @@ oys_rod_CADO.FDR.1
 ```
 
 ```{r}
-invisible(lapply(oys_rod_CADO.FDR.1, write, "outliers_lfmm2_CADO_095.txt", append=TRUE))
+invisible(lapply(oys_rod_CADO.FDR.1, write, "outliers_lfmm2_CADO_098.txt", append=TRUE))
 ```
 
 
@@ -279,7 +279,7 @@ zscore_rod_DIS <- oys_rod_DIS.pv$score[,1]   # zscores for first predictor, we o
 ```
 
 ```{r}
-new.gif <- 0.96           ## choose your new GIF
+new.gif <- 0.87           ## choose your new GIF
 
 # Manual adjustment of the p-values:
 adj.pv_rod_DIS <- pchisq(zscore_rod_DIS^2/new.gif, df=1, lower = FALSE)
@@ -289,7 +289,7 @@ adj.pv_rod_DIS <- pchisq(zscore_rod_DIS^2/new.gif, df=1, lower = FALSE)
 # plot the p-value histograms with the new gif
 hist(oys_rod_DIS.pv$pvalue[,1], main="Unadjusted p-values")        
 hist(oys_rod_DIS.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.27)")
-hist(adj.pv_rod_DIS, main="REadjusted p-values (GIF=0.96)")
+hist(adj.pv_rod_DIS, main="REadjusted p-values (GIF=0.87)")
 ```
 
 ```{r}
@@ -311,7 +311,7 @@ oys_rod_DIS.FDR.1
 ```
 
 ```{r}
-invisible(lapply(oys_rod_DIS.FDR.1, write, "outliers_lfmm2_DIS_096.txt", append=TRUE))
+invisible(lapply(oys_rod_DIS.FDR.1, write, "outliers_lfmm2_DIS_087.txt", append=TRUE))
 ```
 
 **Now looking at the combined variable (binary).**
@@ -439,6 +439,10 @@ oys_rod_ADD.FDR.1 <- which(oys_rod_ADD.qv < 0.1) ## identify which SNPs these ar
 oys_rod_ADD.FDR.1
 ```
 
+```{r}
+invisible(lapply(oys_rod_ADD.FDR.1, write, "outliers_lfmm2_C_ADD.txt", append=TRUE))
+```
+
 These 12 were also identified for the combined_binary variable. The combined_binary had 95 additional outliers. We will move forward with the combined binary variable outliers, but I will keep track of these specific 12 as outliers of interest. 
 
 ### Modified GIF Exploratory Analysis 
@@ -451,7 +455,7 @@ For CADO, I tested the following GIF values and report the number of outliers de
 |--------------|---------------|
 | 1.08 (calc.) |      0        |
 |    1.00      |      1        |
-|    0.98      |      5        |
+|  **0.98**    |    **5**      |
 |  **0.96**    |    **31**     |
 |  **0.95**    |    **45**     |
 |  **0.94**    |    **140**    |
@@ -464,7 +468,9 @@ For Disease, I tested the following GIF values and report the number of outliers
 |--------------|---------------|
 | 1.27 (calc.) |      0        |
 |    1.00      |      0        |
-|    0.97      |      26       |
+|    0.99      |      3        |
+|  **0.98**    |    **3**      |
+|  **0.97**    |    **26**     |
 |  **0.96**    |    **29**     |
 |  **0.93**    |    **47**     |
 |  **0.92**    |    **181**    |
@@ -472,7 +478,7 @@ For Disease, I tested the following GIF values and report the number of outliers
 
 Fist, create a file that includes the chromosome and position for each SNP index.
 
-```{bash}
+```{bash loci.plus.index file}
 zcat SNP.TRSdp10g1.FIL.vcf.gz | mawk '!/#/' | cut -f1,2 > totalloci
 NUM=(`cat totalloci | wc -l`)
 paste <(seq 1 $NUM) totalloci > loci.plus.index
@@ -480,8 +486,10 @@ paste <(seq 1 $NUM) totalloci > loci.plus.index
 
 Now update the outlier SNP index txt files to add the chromosome and position for each SNP. I'll do this for each test file.
 
-```{bash}
+```{bash outlier loci position files}
 # CADO outlier files
+cat outliers_lfmm2_CADO_098.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_098.loci.txt
+
 cat outliers_lfmm2_CADO_096.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_096.loci.txt
 
 cat outliers_lfmm2_CADO_095.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_095.loci.txt
@@ -491,6 +499,10 @@ cat outliers_lfmm2_CADO_094.txt | parallel "grep -w ^{} loci.plus.index" | cut -
 cat outliers_lfmm2_CADO_09.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CADO_09.loci.txt
 
 # Disease outlier files
+cat outliers_lfmm2_DIS_098.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_098.loci.txt
+
+cat outliers_lfmm2_DIS_097.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_097.loci.txt
+
 cat outliers_lfmm2_DIS_096.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_096.loci.txt
 
 cat outliers_lfmm2_DIS_093.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_093.loci.txt
@@ -498,12 +510,21 @@ cat outliers_lfmm2_DIS_093.txt | parallel "grep -w ^{} loci.plus.index" | cut -f
 cat outliers_lfmm2_DIS_092.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_092.loci.txt
 
 cat outliers_lfmm2_DIS_09.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_09.loci.txt
+
+cat outliers_lfmm2_DIS_087.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_DIS_087.loci.txt
+
+# Combined treatment outliers
+cat outliers_lfmm2_CB.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_CB.loci.txt
+
+cat outliers_lfmm2_C_ADD.txt | parallel "grep -w ^{} loci.plus.index" | cut -f2,3 > outliers_lfmm2_C_ADD.loci.txt
 ```
 
 Using vcftools, create VCF files with just the outlier SNPs.
 
 ```{bash}
 # CADO
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_CADO_098.loci.txt --out outliers_lfmm2_CADO_098
+
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_CADO_096.loci.txt --out outliers_lfmm2_CADO_096
 
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_CADO_095.loci.txt --out outliers_lfmm2_CADO_095
@@ -513,6 +534,10 @@ vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_CADO_09.loci.txt --out outliers_lfmm2_CADO_09
 
 # Disease
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_DIS_098.loci.txt --out outliers_lfmm2_DIS_098
+
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_DIS_097.loci.txt --out outliers_lfmm2_DIS_097
+
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_DIS_096.loci.txt --out outliers_lfmm2_DIS_096
 
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_DIS_093.loci.txt --out outliers_lfmm2_DIS_093
@@ -520,229 +545,1529 @@ vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_DIS_092.loci.txt --out outliers_lfmm2_DIS_092
 
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_DIS_09.loci.txt --out outliers_lfmm2_DIS_09
+
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_DIS_087.loci.txt --out outliers_lfmm2_DIS_087
+
+# Combined treatment outliers
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_CB.loci.txt --out outliers_lfmm2_CB
+
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions outliers_lfmm2_C_ADD.loci.txt --out outliers_lfmm2_C_ADD
 ```
 
 
-
-
-
-
-
-
-
-
-### Trying with K = 2
+For each VCF file, I'm going to run PCA and a PERMANOVA to test for significant differences between treatments. My thought is that is there is a significant difference with even the larger outlier SNP datasets, then we can say they are outliers with more confidence. 
 
 ```{r}
-K <- 2
-```
-
-### Run LFMM 
-
-Looking at the CADO variable first.
-
-```{r}
-oys_rod_K2_CADO.lfmm <- lfmm_ridge(Y=gen_rod, X=CADO, K=K) ## change K as you see fit
+library(vcfR)
+library(tibble)
+library(ggplot2)
 ```
 
 ```{r}
-#calculating test statistics for the predictor
-oys_rod_K2_CADO.pv <- lfmm_test(Y=gen_rod, X=CADO, lfmm=oys_rod_K2_CADO.lfmm, calibrate="gif")
-
-names(oys_rod_K2_CADO.pv) # this object includes raw z-scores and p-values, as well as GIF-calibrated scores and p-values
+# Setting up strata file - population info and environmental data 
+strata_ROD <- read.table("./strata_ROD_tab", header=TRUE)
 ```
 
 ```{r}
-#Looking at the genomic inflation factor (GIF) - a value around 1 means the test(s) is appropriately calibrated. Here it is 1.07.
-oys_rod_K2_CADO.pv$gif
-```
-
-An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative.
-
-```{r}
-# look at how application of the GIF to the p-values impacts the p-value distribution:
-hist(oys_rod_K2_CADO.pv$pvalue[,1], main="Unadjusted p-values")        
-hist(oys_rod_K2_CADO.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values")
-```
-
-There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers.
-
-```{r}
-# Let's change the GIF and readjust the p-values:
-zscore_rod_K2_CADO <- oys_rod_K2_CADO.pv$score[,1]   # zscores for first predictor, we only have one in our case...
-(gif_rod_K2_CADO <- oys_rod_K2_CADO.pv$gif[1])       ## d.fault GIF for this predictor
+pop <- c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20))
 ```
 
 ```{r}
-new.gif <- 1.00           ## choose your new GIF
+Stress <- c(rep("No", 20),rep("Yes", 20),rep("No", 20),rep("Yes", 20))
 
-# Manual adjustment of the p-values:
-adj.pv_rod_K2_CADO <- pchisq(zscore_rod_K2_CADO^2/new.gif, df=1, lower = FALSE)
+Disease <- c(rep("No", 20),rep("No", 20),rep("Yes", 20),rep("Yes", 20))
+```
+
+# CADO variable 0.98 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_CADO_098 <- read.vcfR("outliers_lfmm2_CADO_098.recode.vcf")
 ```
 
 ```{r}
-# plot the p-value histograms with the new gif
-hist(oys_rod_K2_CADO.pv$pvalue[,1], main="Unadjusted p-values")        
-hist(oys_rod_K2_CADO.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.07)")
-hist(adj.pv_rod_K2_CADO, main="REadjusted p-values (GIF=1.00)")
+rad_out_lfmm_CADO_098.filt <- vcfR2genind(vcf_out_lfmm_CADO_098, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_CADO_098.filt
 ```
 
 ```{r}
-#convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
-# then an FDR threshold can be used to control the number of false positive detections
-oys_rod_K2_CADO.qv <- qvalue(oys_rod_K2_CADO.pv$calibrated.pvalue)$qvalues
-length(which(oys_rod_K2_CADO.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+# Plot a PCA for the all outlier loci
+x_out_lfmm_CADO_098 <- scaleGen(rad_out_lfmm_CADO_098.filt, NA.method = "mean")
+out_lfmm_CADO_098_pca <- dudi.pca(x_out_lfmm_CADO_098, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_CADO_098 <- round((out_lfmm_CADO_098_pca$eig / (sum(out_lfmm_CADO_098_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_CADO_098 <- as.data.frame(out_lfmm_CADO_098_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_CADO_098.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_CADO_098 <- pca_dat_out_lfmm_CADO_098 %>%
+  mutate(Stress = ifelse(pop %in% c("CH", "RH"), "Yes", "No"))
 ```
 
 ```{r}
-#Trying with the GIF adjusted value
-oys_rod_K2_CADO.qv <- qvalue(adj.pv_rod_K2_CADO)$qvalues
-length(which(oys_rod_K2_CADO.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+pc_scores_CADO_098 <- out_lfmm_CADO_098_pca$li
 ```
 
 ```{r}
-oys_rod_K2_CADO.FDR.1 <- which(oys_rod_K2_CADO.qv < 0.1) ## identify which SNPs these are
-oys_rod_K2_CADO.FDR.1
+permanova_result_CADO_098 <- adonis2(pc_scores_CADO_098 ~ pop, method = "euclidean")
+print(permanova_result_CADO_098)
 ```
 
 ```{r}
-invisible(lapply(oys_rod_K2_CADO.FDR.1, write, "outliers_lfmm2_CADO.txt", append=TRUE))
-```
-
-
-Now looking at the disease variable.
-
-```{r}
-oys_rod_K2_DIS.lfmm <- lfmm_ridge(Y=gen_rod, X=DIS, K=K) ## change K as you see fit
+permanova_result_CADO_098 <- adonis2(pc_scores_CADO_098 ~ Stress, method = "euclidean")
+print(permanova_result_CADO_098)
 ```
 
 ```{r}
-#calculating test statistics for the predictor
-oys_rod_K2_DIS.pv <- lfmm_test(Y=gen_rod, X=DIS, lfmm=oys_rod_K2_DIS.lfmm, calibrate="gif")
+pca_data_CADO_098 <- data.frame(PC1 = pc_scores_CADO_098[,1], PC2 = pc_scores_CADO_098[,2], Treatment = pop)
 
-names(oys_rod_K2_DIS.pv) # this object includes raw z-scores and p-values, as well as GIF-calibrated scores and p-values
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_098 <- permanova_result_CADO_098$`Pr(>F)`[1]
+
+eigenvalues_CADO_098 <- eigen(cov(pca_data_CADO_098[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_098 <- eigenvalues_CADO_098 / sum(eigenvalues_CADO_098) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_098, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_098[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_098[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_098, digits = 2)),
+           hjust = -0.1, vjust = -1)
 ```
 
 ```{r}
-#Looking at the genomic inflation factor (GIF) - a value around 1 means the test(s) is appropriately calibrated. Here it is 1.2.
-oys_rod_K2_DIS.pv$gif
+pca_data_CADO_098 <- data.frame(PC1 = pc_scores_CADO_098[,1], PC2 = pc_scores_CADO_098[,2], Treatment = Stress)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Stress")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_098 <- permanova_result_CADO_098$`Pr(>F)`[1]
+
+eigenvalues_CADO_098 <- eigen(cov(pca_data_CADO_098[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_098 <- eigenvalues_CADO_098 / sum(eigenvalues_CADO_098) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_098, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_098[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_098[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_098, digits = 2)),
+           hjust = -0.1, vjust = -1)
 ```
 
-An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative.
+
+# CADO variable 0.96 GIF
 
 ```{r}
-# look at how application of the GIF to the p-values impacts the p-value distribution:
-hist(oys_rod_K2_DIS.pv$pvalue[,1], main="Unadjusted p-values")        
-hist(oys_rod_K2_DIS.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values")
-```
-
-There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers.
-
-```{r}
-# Let's change the GIF and readjust the p-values:
-zscore_rod_K2_DIS <- oys_rod_K2_DIS.pv$score[,1]   # zscores for first predictor, we only have one in our case...
-(gif_rod_K2_DIS <- oys_rod_K2_DIS.pv$gif[1])       ## d.fault GIF for this predictor
-```
-
-```{r}
-new.gif <- 0.96           ## choose your new GIF
-
-# Manual adjustment of the p-values:
-adj.pv_rod_K2_DIS <- pchisq(zscore_rod_K2_DIS^2/new.gif, df=1, lower = FALSE)
-```
-
-```{r}
-# plot the p-value histograms with the new gif
-hist(oys_rod_K2_DIS.pv$pvalue[,1], main="Unadjusted p-values")        
-hist(oys_rod_K2_DIS.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.2)")
-hist(adj.pv_rod_K2_DIS, main="REadjusted p-values (GIF=0.96)")
-```
-
-```{r}
-#convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
-# then an FDR threshold can be used to control the number of false positive detections
-<<<<<<< HEAD
-oys_rod_K2_DIS.qv <- qvalue(oys_rod_K2_DIS.pv$calibrated.pvalue)$qvalues
-length(which(oys_rod_K2_DIS.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+# Read in VCF file
+vcf_out_lfmm_CADO_096 <- read.vcfR("outliers_lfmm2_CADO_096.recode.vcf")
 ```
 
 ```{r}
-#Trying with the GIF adjusted value
-oys_rod_K2_DIS.qv <- qvalue(adj.pv_rod_K2_DIS)$qvalues
-length(which(oys_rod_K2_DIS.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+rad_out_lfmm_CADO_096.filt <- vcfR2genind(vcf_out_lfmm_CADO_096, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_CADO_096.filt
 ```
 
 ```{r}
-oys_rod_K2_DIS.FDR.1 <- which(oys_rod_K2_DIS.qv < 0.1) ## identify which SNPs these are
-oys_rod_K2_DIS.FDR.1
+# Plot a PCA for the all outlier loci
+x_out_lfmm_CADO_096 <- scaleGen(rad_out_lfmm_CADO_096.filt, NA.method = "mean")
+out_lfmm_CADO_096_pca <- dudi.pca(x_out_lfmm_CADO_096, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_CADO_096 <- round((out_lfmm_CADO_096_pca$eig / (sum(out_lfmm_CADO_096_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_CADO_096 <- as.data.frame(out_lfmm_CADO_096_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_CADO_096.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_CADO_096 <- pca_dat_out_lfmm_CADO_096 %>%
+  mutate(Stress = ifelse(pop %in% c("CH", "RH"), "Yes", "No"))
 ```
 
 ```{r}
-invisible(lapply(oys_rod_K2_DIS.FDR.1, write, "outliers_lfmm2_DIS.txt", append=TRUE))
-```
-
-**Now looking at the combined variable (binary).**
-
-```{r}
-oys_rod_CB.lfmm <- lfmm_ridge(Y=gen_rod, X=COMB_BIN, K=2) ## change K as you see fit
+pc_scores_CADO_096 <- out_lfmm_CADO_096_pca$li
 ```
 
 ```{r}
-#calculating test statistics for the predictor
-oys_rod_CB.pv <- lfmm_test(Y=gen_rod, X=COMB_BIN, lfmm=oys_rod_CB.lfmm, calibrate="gif")
-
-names(oys_rod_CB.pv) # this object includes raw z-scores and p-values, as well as GIF-calibrated scores and p-values
+permanova_result_CADO_096 <- adonis2(pc_scores_CADO_096 ~ pop, method = "euclidean")
+print(permanova_result_CADO_096)
 ```
 
 ```{r}
-#Looking at the genomic inflation factor (GIF) - a value around 1 means the test(s) is appropriately calibrated. Here it is 1.34.
-oys_rod_CB.pv$gif
-```
-
-An appropriately calibrated set of tests will have a GIF of around 1. An elevated GIF would indicate that the results may be overly liberal in identifying candidate SNPs. If the GIF is less than one, the test may be too conservative.
-
-```{r}
-# look at how application of the GIF to the p-values impacts the p-value distribution:
-hist(oys_rod_CB.pv$pvalue[,1], main="Unadjusted p-values")        
-hist(oys_rod_CB.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values")
-```
-
-There should be a relatively flat histogram (most loci not under selection) with a peak near zero, indicative of candidate adaptive markers.
-
-```{r}
-# Let's change the GIF and readjust the p-values:
-zscore_rod_CB <- oys_rod_CB.pv$score[,1]   # zscores for first predictor, we only have one in our case...
-(gif_rod_CB <- oys_rod_CB.pv$gif[1])       ## d.fault GIF for this predictor
+permanova_result_CADO_096 <- adonis2(pc_scores_CADO_096 ~ Stress, method = "euclidean")
+print(permanova_result_CADO_096)
 ```
 
 ```{r}
-new.gif <- 1.00           ## choose your new GIF
+pca_data_CADO_096 <- data.frame(PC1 = pc_scores_CADO_096[,1], PC2 = pc_scores_CADO_096[,2], Treatment = pop)
 
-# Manual adjustment of the p-values:
-adj.pv_rod_CB <- pchisq(zscore_rod_CB^2/new.gif, df=1, lower = FALSE)
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_096 <- permanova_result_CADO_096$`Pr(>F)`[1]
+
+eigenvalues_CADO_096 <- eigen(cov(pca_data_CADO_096[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_096 <- eigenvalues_CADO_096 / sum(eigenvalues_CADO_096) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_096, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_096[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_096[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_096, digits = 2)),
+           hjust = -0.1, vjust = -1)
 ```
 
 ```{r}
-# plot the p-value histograms with the new gif
-hist(oys_rod_CB.pv$pvalue[,1], main="Unadjusted p-values")        
-hist(oys_rod_CB.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.34)")
-hist(adj.pv_rod_CB, main="REadjusted p-values (GIF=1.00)")
+pca_data_CADO_096 <- data.frame(PC1 = pc_scores_CADO_096[,1], PC2 = pc_scores_CADO_096[,2], Treatment = Stress)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Stress")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_096 <- permanova_result_CADO_096$`Pr(>F)`[1]
+
+eigenvalues_CADO_096 <- eigen(cov(pca_data_CADO_096[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_096 <- eigenvalues_CADO_096 / sum(eigenvalues_CADO_096) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_096, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_096[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_096[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_096, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+# CADO variable 0.95 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_CADO_095 <- read.vcfR("outliers_lfmm2_CADO_095.recode.vcf")
 ```
 
 ```{r}
-#convert adjusted p-values to q values - q-values provide a measure of each SNP’s significance, automatically taking into account the fact that thousands are simultaneously being tested
-# then an FDR threshold can be used to control the number of false positive detections
-oys_rod_CB.qv <- qvalue(oys_rod_CB.pv$calibrated.pvalue)$qvalues
-length(which(oys_rod_CB.qv < 0.1)) ## how many SNPs have an FDR < 10%?
+rad_out_lfmm_CADO_095.filt <- vcfR2genind(vcf_out_lfmm_CADO_095, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_CADO_095.filt
 ```
 
 ```{r}
-oys_rod_CB.FDR.1 <- which(oys_rod_CB.qv < 0.1) ## identify which SNPs these are
-oys_rod_CB.FDR.1
+# Plot a PCA for the all outlier loci
+x_out_lfmm_CADO_095 <- scaleGen(rad_out_lfmm_CADO_095.filt, NA.method = "mean")
+out_lfmm_CADO_095_pca <- dudi.pca(x_out_lfmm_CADO_095, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_CADO_095 <- round((out_lfmm_CADO_095_pca$eig / (sum(out_lfmm_CADO_095_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_CADO_095 <- as.data.frame(out_lfmm_CADO_095_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_CADO_095.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_CADO_095 <- pca_dat_out_lfmm_CADO_095 %>%
+  mutate(Stress = ifelse(pop %in% c("CH", "RH"), "Yes", "No"))
 ```
 
 ```{r}
-invisible(lapply(oys_rod_CB.FDR.1, write, "outliers_lfmm2_CB.txt", append=TRUE))
+pc_scores_CADO_095 <- out_lfmm_CADO_095_pca$li
 ```
+
+```{r}
+permanova_result_CADO_095 <- adonis2(pc_scores_CADO_095 ~ pop, method = "euclidean")
+print(permanova_result_CADO_095)
+```
+
+```{r}
+permanova_result_CADO_095 <- adonis2(pc_scores_CADO_095 ~ Stress, method = "euclidean")
+print(permanova_result_CADO_095)
+```
+
+```{r}
+pca_data_CADO_095 <- data.frame(PC1 = pc_scores_CADO_095[,1], PC2 = pc_scores_CADO_095[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_095 <- permanova_result_CADO_095$`Pr(>F)`[1]
+
+eigenvalues_CADO_095 <- eigen(cov(pca_data_CADO_095[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_095 <- eigenvalues_CADO_095 / sum(eigenvalues_CADO_095) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_095, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_095[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_095[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_095, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_CADO_095 <- data.frame(PC1 = pc_scores_CADO_095[,1], PC2 = pc_scores_CADO_095[,2], Treatment = Stress)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Stress")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_095 <- permanova_result_CADO_095$`Pr(>F)`[1]
+
+eigenvalues_CADO_095 <- eigen(cov(pca_data_CADO_095[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_095 <- eigenvalues_CADO_095 / sum(eigenvalues_CADO_095) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_095, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_095[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_095[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_095, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+
+# CADO variable 0.94 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_CADO_094 <- read.vcfR("outliers_lfmm2_CADO_094.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_CADO_094.filt <- vcfR2genind(vcf_out_lfmm_CADO_094, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_CADO_094.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_CADO_094 <- scaleGen(rad_out_lfmm_CADO_094.filt, NA.method = "mean")
+out_lfmm_CADO_094_pca <- dudi.pca(x_out_lfmm_CADO_094, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_CADO_094 <- round((out_lfmm_CADO_094_pca$eig / (sum(out_lfmm_CADO_094_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_CADO_094 <- as.data.frame(out_lfmm_CADO_094_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_CADO_094.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_CADO_094 <- pca_dat_out_lfmm_CADO_094 %>%
+  mutate(Stress = ifelse(pop %in% c("CH", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_CADO_094 <- out_lfmm_CADO_094_pca$li
+```
+
+```{r}
+permanova_result_CADO_094 <- adonis2(pc_scores_CADO_094 ~ pop, method = "euclidean")
+print(permanova_result_CADO_094)
+```
+
+```{r}
+permanova_result_CADO_094 <- adonis2(pc_scores_CADO_094 ~ Stress, method = "euclidean")
+print(permanova_result_CADO_094)
+```
+
+```{r}
+pca_data_CADO_094 <- data.frame(PC1 = pc_scores_CADO_094[,1], PC2 = pc_scores_CADO_094[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_094 <- permanova_result_CADO_094$`Pr(>F)`[1]
+
+eigenvalues_CADO_094 <- eigen(cov(pca_data_CADO_094[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_094 <- eigenvalues_CADO_094 / sum(eigenvalues_CADO_094) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_094, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_094[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_094[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_094, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_CADO_094 <- data.frame(PC1 = pc_scores_CADO_094[,1], PC2 = pc_scores_CADO_094[,2], Treatment = Stress)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Stress")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_094 <- permanova_result_CADO_094$`Pr(>F)`[1]
+
+eigenvalues_CADO_094 <- eigen(cov(pca_data_CADO_094[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_094 <- eigenvalues_CADO_094 / sum(eigenvalues_CADO_094) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_094, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_094[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_094[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_094, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+
+# CADO variable 0.9 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_CADO_09 <- read.vcfR("outliers_lfmm2_CADO_09.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_CADO_09.filt <- vcfR2genind(vcf_out_lfmm_CADO_09, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_CADO_09.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_CADO_09 <- scaleGen(rad_out_lfmm_CADO_09.filt, NA.method = "mean")
+out_lfmm_CADO_09_pca <- dudi.pca(x_out_lfmm_CADO_09, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_CADO_09 <- round((out_lfmm_CADO_09_pca$eig / (sum(out_lfmm_CADO_09_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_CADO_09 <- as.data.frame(out_lfmm_CADO_09_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_CADO_09.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_CADO_09 <- pca_dat_out_lfmm_CADO_09 %>%
+  mutate(Stress = ifelse(pop %in% c("CH", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_CADO_09 <- out_lfmm_CADO_09_pca$li
+```
+
+```{r}
+permanova_result_CADO_09 <- adonis2(pc_scores_CADO_09 ~ pop, method = "euclidean")
+print(permanova_result_CADO_09)
+```
+
+```{r}
+permanova_result_CADO_09 <- adonis2(pc_scores_CADO_09 ~ Stress, method = "euclidean")
+print(permanova_result_CADO_09)
+```
+
+```{r}
+pca_data_CADO_09 <- data.frame(PC1 = pc_scores_CADO_09[,1], PC2 = pc_scores_CADO_09[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_09 <- permanova_result_CADO_09$`Pr(>F)`[1]
+
+eigenvalues_CADO_09 <- eigen(cov(pca_data_CADO_09[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_09 <- eigenvalues_CADO_09 / sum(eigenvalues_CADO_09) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_09, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_09[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_09[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_09, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_CADO_09 <- data.frame(PC1 = pc_scores_CADO_09[,1], PC2 = pc_scores_CADO_09[,2], Treatment = Stress)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Stress")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_CADO_09 <- permanova_result_CADO_09$`Pr(>F)`[1]
+
+eigenvalues_CADO_09 <- eigen(cov(pca_data_CADO_09[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CADO_09 <- eigenvalues_CADO_09 / sum(eigenvalues_CADO_09) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CADO_09, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CADO_09[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CADO_09[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CADO_09, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+
+# Disease variable 0.98 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_DIS_098 <- read.vcfR("outliers_lfmm2_DIS_098.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_DIS_098.filt <- vcfR2genind(vcf_out_lfmm_DIS_098, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_DIS_098.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_DIS_098 <- scaleGen(rad_out_lfmm_DIS_098.filt, NA.method = "mean")
+out_lfmm_DIS_098_pca <- dudi.pca(x_out_lfmm_DIS_098, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_DIS_098 <- round((out_lfmm_DIS_098_pca$eig / (sum(out_lfmm_DIS_098_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_DIS_098 <- as.data.frame(out_lfmm_DIS_098_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_DIS_098.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_DIS_098 <- pca_dat_out_lfmm_DIS_098 %>%
+  mutate(Disease = ifelse(pop %in% c("R", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_DIS_098 <- out_lfmm_DIS_098_pca$li
+```
+
+```{r}
+permanova_result_DIS_098 <- adonis2(pc_scores_DIS_098 ~ pop, method = "euclidean")
+print(permanova_result_DIS_098)
+```
+
+```{r}
+permanova_result_DIS_098 <- adonis2(pc_scores_DIS_098 ~ Disease, method = "euclidean")
+print(permanova_result_DIS_098)
+```
+
+```{r}
+pca_data_DIS_098 <- data.frame(PC1 = pc_scores_DIS_098[,1], PC2 = pc_scores_DIS_098[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_098 <- permanova_result_DIS_098$`Pr(>F)`[1]
+
+eigenvalues_DIS_098 <- eigen(cov(pca_data_DIS_098[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_098 <- eigenvalues_DIS_098 / sum(eigenvalues_DIS_098) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_098, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_098[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_098[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_098, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_DIS_098 <- data.frame(PC1 = pc_scores_DIS_098[,1], PC2 = pc_scores_DIS_098[,2], Treatment = Disease)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Disease")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_098 <- permanova_result_DIS_098$`Pr(>F)`[1]
+
+eigenvalues_DIS_098 <- eigen(cov(pca_data_DIS_098[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_098 <- eigenvalues_DIS_098 / sum(eigenvalues_DIS_098) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_098, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_098[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_098[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_098, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+
+# Disease variable 0.97 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_DIS_097 <- read.vcfR("outliers_lfmm2_DIS_097.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_DIS_097.filt <- vcfR2genind(vcf_out_lfmm_DIS_097, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_DIS_097.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_DIS_097 <- scaleGen(rad_out_lfmm_DIS_097.filt, NA.method = "mean")
+out_lfmm_DIS_097_pca <- dudi.pca(x_out_lfmm_DIS_097, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_DIS_097 <- round((out_lfmm_DIS_097_pca$eig / (sum(out_lfmm_DIS_097_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_DIS_097 <- as.data.frame(out_lfmm_DIS_097_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_DIS_097.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_DIS_097 <- pca_dat_out_lfmm_DIS_097 %>%
+  mutate(Disease = ifelse(pop %in% c("R", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_DIS_097 <- out_lfmm_DIS_097_pca$li
+```
+
+```{r}
+permanova_result_DIS_097 <- adonis2(pc_scores_DIS_097 ~ pop, method = "euclidean")
+print(permanova_result_DIS_097)
+```
+
+```{r}
+permanova_result_DIS_097 <- adonis2(pc_scores_DIS_097 ~ Disease, method = "euclidean")
+print(permanova_result_DIS_097)
+```
+
+```{r}
+pca_data_DIS_097 <- data.frame(PC1 = pc_scores_DIS_097[,1], PC2 = pc_scores_DIS_097[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_097 <- permanova_result_DIS_097$`Pr(>F)`[1]
+
+eigenvalues_DIS_097 <- eigen(cov(pca_data_DIS_097[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_097 <- eigenvalues_DIS_097 / sum(eigenvalues_DIS_097) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_097, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_097[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_097[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_097, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_DIS_097 <- data.frame(PC1 = pc_scores_DIS_097[,1], PC2 = pc_scores_DIS_097[,2], Treatment = Disease)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Disease")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_097 <- permanova_result_DIS_097$`Pr(>F)`[1]
+
+eigenvalues_DIS_097 <- eigen(cov(pca_data_DIS_097[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_097 <- eigenvalues_DIS_097 / sum(eigenvalues_DIS_097) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_097, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_097[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_097[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_097, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+# Disease variable 0.96 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_DIS_096 <- read.vcfR("outliers_lfmm2_DIS_096.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_DIS_096.filt <- vcfR2genind(vcf_out_lfmm_DIS_096, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_DIS_096.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_DIS_096 <- scaleGen(rad_out_lfmm_DIS_096.filt, NA.method = "mean")
+out_lfmm_DIS_096_pca <- dudi.pca(x_out_lfmm_DIS_096, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_DIS_096 <- round((out_lfmm_DIS_096_pca$eig / (sum(out_lfmm_DIS_096_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_DIS_096 <- as.data.frame(out_lfmm_DIS_096_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_DIS_096.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_DIS_096 <- pca_dat_out_lfmm_DIS_096 %>%
+  mutate(Disease = ifelse(pop %in% c("R", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_DIS_096 <- out_lfmm_DIS_096_pca$li
+```
+
+```{r}
+permanova_result_DIS_096 <- adonis2(pc_scores_DIS_096 ~ pop, method = "euclidean")
+print(permanova_result_DIS_096)
+```
+
+```{r}
+permanova_result_DIS_096 <- adonis2(pc_scores_DIS_096 ~ Disease, method = "euclidean")
+print(permanova_result_DIS_096)
+```
+
+```{r}
+pca_data_DIS_096 <- data.frame(PC1 = pc_scores_DIS_096[,1], PC2 = pc_scores_DIS_096[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_096 <- permanova_result_DIS_096$`Pr(>F)`[1]
+
+eigenvalues_DIS_096 <- eigen(cov(pca_data_DIS_096[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_096 <- eigenvalues_DIS_096 / sum(eigenvalues_DIS_096) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_096, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_096[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_096[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_096, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_DIS_096 <- data.frame(PC1 = pc_scores_DIS_096[,1], PC2 = pc_scores_DIS_096[,2], Treatment = Disease)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Disease")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_096 <- permanova_result_DIS_096$`Pr(>F)`[1]
+
+eigenvalues_DIS_096 <- eigen(cov(pca_data_DIS_096[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_096 <- eigenvalues_DIS_096 / sum(eigenvalues_DIS_096) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_096, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_096[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_096[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_096, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+# Disease variable 0.93 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_DIS_093 <- read.vcfR("outliers_lfmm2_DIS_093.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_DIS_093.filt <- vcfR2genind(vcf_out_lfmm_DIS_093, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_DIS_093.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_DIS_093 <- scaleGen(rad_out_lfmm_DIS_093.filt, NA.method = "mean")
+out_lfmm_DIS_093_pca <- dudi.pca(x_out_lfmm_DIS_093, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_DIS_093 <- round((out_lfmm_DIS_093_pca$eig / (sum(out_lfmm_DIS_093_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_DIS_093 <- as.data.frame(out_lfmm_DIS_093_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_DIS_093.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_DIS_093 <- pca_dat_out_lfmm_DIS_093 %>%
+  mutate(Disease = ifelse(pop %in% c("R", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_DIS_093 <- out_lfmm_DIS_093_pca$li
+```
+
+```{r}
+permanova_result_DIS_093 <- adonis2(pc_scores_DIS_093 ~ pop, method = "euclidean")
+print(permanova_result_DIS_093)
+```
+
+```{r}
+permanova_result_DIS_093 <- adonis2(pc_scores_DIS_093 ~ Disease, method = "euclidean")
+print(permanova_result_DIS_093)
+```
+
+```{r}
+pca_data_DIS_093 <- data.frame(PC1 = pc_scores_DIS_093[,1], PC2 = pc_scores_DIS_093[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_093 <- permanova_result_DIS_093$`Pr(>F)`[1]
+
+eigenvalues_DIS_093 <- eigen(cov(pca_data_DIS_093[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_093 <- eigenvalues_DIS_093 / sum(eigenvalues_DIS_093) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_093, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_093[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_093[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_093, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_DIS_093 <- data.frame(PC1 = pc_scores_DIS_093[,1], PC2 = pc_scores_DIS_093[,2], Treatment = Disease)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Disease")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_093 <- permanova_result_DIS_093$`Pr(>F)`[1]
+
+eigenvalues_DIS_093 <- eigen(cov(pca_data_DIS_093[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_093 <- eigenvalues_DIS_093 / sum(eigenvalues_DIS_093) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_093, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_093[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_093[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_093, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+# Disease variable 0.92 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_DIS_092 <- read.vcfR("outliers_lfmm2_DIS_092.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_DIS_092.filt <- vcfR2genind(vcf_out_lfmm_DIS_092, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_DIS_092.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_DIS_092 <- scaleGen(rad_out_lfmm_DIS_092.filt, NA.method = "mean")
+out_lfmm_DIS_092_pca <- dudi.pca(x_out_lfmm_DIS_092, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_DIS_092 <- round((out_lfmm_DIS_092_pca$eig / (sum(out_lfmm_DIS_092_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_DIS_092 <- as.data.frame(out_lfmm_DIS_092_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_DIS_092.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_DIS_092 <- pca_dat_out_lfmm_DIS_092 %>%
+  mutate(Disease = ifelse(pop %in% c("R", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_DIS_092 <- out_lfmm_DIS_092_pca$li
+```
+
+```{r}
+permanova_result_DIS_092 <- adonis2(pc_scores_DIS_092 ~ pop, method = "euclidean")
+print(permanova_result_DIS_092)
+```
+
+```{r}
+permanova_result_DIS_092 <- adonis2(pc_scores_DIS_092 ~ Disease, method = "euclidean")
+print(permanova_result_DIS_092)
+```
+
+```{r}
+pca_data_DIS_092 <- data.frame(PC1 = pc_scores_DIS_092[,1], PC2 = pc_scores_DIS_092[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_092 <- permanova_result_DIS_092$`Pr(>F)`[1]
+
+eigenvalues_DIS_092 <- eigen(cov(pca_data_DIS_092[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_092 <- eigenvalues_DIS_092 / sum(eigenvalues_DIS_092) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_092, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_092[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_092[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_092, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_DIS_092 <- data.frame(PC1 = pc_scores_DIS_092[,1], PC2 = pc_scores_DIS_092[,2], Treatment = Disease)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Disease")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_092 <- permanova_result_DIS_092$`Pr(>F)`[1]
+
+eigenvalues_DIS_092 <- eigen(cov(pca_data_DIS_092[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_092 <- eigenvalues_DIS_092 / sum(eigenvalues_DIS_092) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_092, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_092[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_092[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_092, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+# Disease variable 0.9 GIF
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_DIS_09 <- read.vcfR("outliers_lfmm2_DIS_09.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_DIS_09.filt <- vcfR2genind(vcf_out_lfmm_DIS_09, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_DIS_09.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_DIS_09 <- scaleGen(rad_out_lfmm_DIS_09.filt, NA.method = "mean")
+out_lfmm_DIS_09_pca <- dudi.pca(x_out_lfmm_DIS_09, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_DIS_09 <- round((out_lfmm_DIS_09_pca$eig / (sum(out_lfmm_DIS_09_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_DIS_09 <- as.data.frame(out_lfmm_DIS_09_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_DIS_09.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_DIS_09 <- pca_dat_out_lfmm_DIS_09 %>%
+  mutate(Disease = ifelse(pop %in% c("R", "RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_DIS_09 <- out_lfmm_DIS_09_pca$li
+```
+
+```{r}
+permanova_result_DIS_09 <- adonis2(pc_scores_DIS_09 ~ pop, method = "euclidean")
+print(permanova_result_DIS_09)
+```
+
+```{r}
+permanova_result_DIS_09 <- adonis2(pc_scores_DIS_09 ~ Disease, method = "euclidean")
+print(permanova_result_DIS_09)
+```
+
+```{r}
+pca_data_DIS_09 <- data.frame(PC1 = pc_scores_DIS_09[,1], PC2 = pc_scores_DIS_09[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_09 <- permanova_result_DIS_09$`Pr(>F)`[1]
+
+eigenvalues_DIS_09 <- eigen(cov(pca_data_DIS_09[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_09 <- eigenvalues_DIS_09 / sum(eigenvalues_DIS_09) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_09, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_09[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_09[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_09, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_DIS_09 <- data.frame(PC1 = pc_scores_DIS_09[,1], PC2 = pc_scores_DIS_09[,2], Treatment = Disease)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Disease")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#E69F00")
+
+# Extract p-value from PERMANOVA result
+p_value_DIS_09 <- permanova_result_DIS_09$`Pr(>F)`[1]
+
+eigenvalues_DIS_09 <- eigen(cov(pca_data_DIS_09[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_DIS_09 <- eigenvalues_DIS_09 / sum(eigenvalues_DIS_09) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_DIS_09, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_DIS_09[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_DIS_09[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_DIS_09, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+# Combined treatment - Binary
+
+```{r}
+Combined <- c(rep("No", 20),rep("No", 20),rep("No", 20),rep("Yes", 20))
+```
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_CB <- read.vcfR("outliers_lfmm2_CB.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_CB.filt <- vcfR2genind(vcf_out_lfmm_CB, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_CB.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_CB <- scaleGen(rad_out_lfmm_CB.filt, NA.method = "mean")
+out_lfmm_CB_pca <- dudi.pca(x_out_lfmm_CB, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_CB <- round((out_lfmm_CB_pca$eig / (sum(out_lfmm_CB_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_CB <- as.data.frame(out_lfmm_CB_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_CB.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_CB <- pca_dat_out_lfmm_CB %>%
+  mutate(Combined = ifelse(pop %in% c("RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_CB <- out_lfmm_CB_pca$li
+```
+
+```{r}
+permanova_result_CB <- adonis2(pc_scores_CB ~ pop, method = "euclidean")
+print(permanova_result_CB)
+```
+
+```{r}
+permanova_result_CB <- adonis2(pc_scores_CB ~ Combined, method = "euclidean")
+print(permanova_result_CB)
+```
+
+```{r}
+pca_data_CB <- data.frame(PC1 = pc_scores_CB[,1], PC2 = pc_scores_CB[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_CB <- permanova_result_CB$`Pr(>F)`[1]
+
+eigenvalues_CB <- eigen(cov(pca_data_CB[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CB <- eigenvalues_CB / sum(eigenvalues_CB) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CB, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CB[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CB[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CB, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_CB <- data.frame(PC1 = pc_scores_CB[,1], PC2 = pc_scores_CB[,2], Treatment = Combined)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Combined")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_CB <- permanova_result_CB$`Pr(>F)`[1]
+
+eigenvalues_CB <- eigen(cov(pca_data_CB[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_CB <- eigenvalues_CB / sum(eigenvalues_CB) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_CB, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_CB[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_CB[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_CB, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+
+# Combined treatment - Additive
+
+```{r}
+# Read in VCF file
+vcf_out_lfmm_C_ADD <- read.vcfR("outliers_lfmm2_C_ADD.recode.vcf")
+```
+
+```{r}
+rad_out_lfmm_C_ADD.filt <- vcfR2genind(vcf_out_lfmm_C_ADD, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_C_ADD.filt
+```
+
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_C_ADD <- scaleGen(rad_out_lfmm_C_ADD.filt, NA.method = "mean")
+out_lfmm_C_ADD_pca <- dudi.pca(x_out_lfmm_C_ADD, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_C_ADD <- round((out_lfmm_C_ADD_pca$eig / (sum(out_lfmm_C_ADD_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_C_ADD <- as.data.frame(out_lfmm_C_ADD_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_C_ADD.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_C_ADD <- pca_dat_out_lfmm_C_ADD %>%
+  mutate(Combined = ifelse(pop %in% c("RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_C_ADD <- out_lfmm_C_ADD_pca$li
+```
+
+```{r}
+permanova_result_C_ADD <- adonis2(pc_scores_C_ADD ~ pop, method = "euclidean")
+print(permanova_result_C_ADD)
+```
+
+```{r}
+permanova_result_C_ADD <- adonis2(pc_scores_C_ADD ~ Combined, method = "euclidean")
+print(permanova_result_C_ADD)
+```
+
+```{r}
+pca_data_C_ADD <- data.frame(PC1 = pc_scores_C_ADD[,1], PC2 = pc_scores_C_ADD[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_C_ADD <- permanova_result_C_ADD$`Pr(>F)`[1]
+
+eigenvalues_C_ADD <- eigen(cov(pca_data_C_ADD[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_C_ADD <- eigenvalues_C_ADD / sum(eigenvalues_C_ADD) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_C_ADD, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_C_ADD[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_C_ADD[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_C_ADD, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+```{r}
+pca_data_C_ADD <- data.frame(PC1 = pc_scores_C_ADD[,1], PC2 = pc_scores_C_ADD[,2], Treatment = Combined)
+
+# Define new treatment names
+treatment_names <- c("No" = "Control",
+                         "Yes" = "Combined")
+
+# Define custom colors
+custom_colors <- c("No" = "#0072B2","Yes" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_C_ADD <- permanova_result_C_ADD$`Pr(>F)`[1]
+
+eigenvalues_C_ADD <- eigen(cov(pca_data_C_ADD[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_C_ADD <- eigenvalues_C_ADD / sum(eigenvalues_C_ADD) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_C_ADD, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_C_ADD[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_C_ADD[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_C_ADD, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
+
+
+# Looking for overlapping outliers
+
+```{bash}
+# CADO Outliers
+sort outliers_lfmm2_CADO_098.txt > outliers_lfmm2_CADO_098_sorted.txt
+sort outliers_lfmm2_CADO_096.txt > outliers_lfmm2_CADO_096_sorted.txt
+sort outliers_lfmm2_CADO_095.txt > outliers_lfmm2_CADO_095_sorted.txt
+sort outliers_lfmm2_CADO_094.txt > outliers_lfmm2_CADO_094_sorted.txt
+sort outliers_lfmm2_CADO_09.txt > outliers_lfmm2_CADO_09_sorted.txt
+
+# Disease Outliers
+sort outliers_lfmm2_DIS_098.txt > outliers_lfmm2_DIS_098_sorted.txt
+sort outliers_lfmm2_DIS_097.txt > outliers_lfmm2_DIS_097_sorted.txt
+sort outliers_lfmm2_DIS_096.txt > outliers_lfmm2_DIS_096_sorted.txt
+sort outliers_lfmm2_DIS_093.txt > outliers_lfmm2_DIS_093_sorted.txt
+sort outliers_lfmm2_DIS_092.txt > outliers_lfmm2_DIS_092_sorted.txt
+sort outliers_lfmm2_DIS_09.txt > outliers_lfmm2_DIS_09_sorted.txt
+
+# Combined treatment
+sort outliers_lfmm2_CB.txt > outliers_lfmm2_CB_sorted.txt
+sort outliers_lfmm2_C_ADD.txt > outliers_lfmm2_C_ADD_sorted.txt
+```
+
+```{bash}
+comm -12 outliers_lfmm2_CADO_098_sorted.txt outliers_lfmm2_CADO_096_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_098_sorted.txt outliers_lfmm2_CADO_095_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_098_sorted.txt outliers_lfmm2_CADO_094_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_098_sorted.txt outliers_lfmm2_CADO_09_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_096_sorted.txt outliers_lfmm2_CADO_095_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_096_sorted.txt outliers_lfmm2_CADO_094_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_096_sorted.txt outliers_lfmm2_CADO_09_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_095_sorted.txt outliers_lfmm2_CADO_094_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_095_sorted.txt outliers_lfmm2_CADO_09_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_094_sorted.txt outliers_lfmm2_CADO_09_sorted.txt | wc -l
+```
+
+```{bash}
+comm -12 outliers_lfmm2_DIS_098_sorted.txt outliers_lfmm2_DIS_097_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_098_sorted.txt outliers_lfmm2_DIS_096_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_098_sorted.txt outliers_lfmm2_DIS_093_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_098_sorted.txt outliers_lfmm2_DIS_092_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_098_sorted.txt outliers_lfmm2_DIS_09_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_097_sorted.txt outliers_lfmm2_DIS_096_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_097_sorted.txt outliers_lfmm2_DIS_093_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_097_sorted.txt outliers_lfmm2_DIS_092_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_097_sorted.txt outliers_lfmm2_DIS_09_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_096_sorted.txt outliers_lfmm2_DIS_093_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_096_sorted.txt outliers_lfmm2_DIS_092_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_096_sorted.txt outliers_lfmm2_DIS_09_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_093_sorted.txt outliers_lfmm2_DIS_092_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_093_sorted.txt outliers_lfmm2_DIS_09_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_092_sorted.txt outliers_lfmm2_DIS_09_sorted.txt | wc -l
+```
+
+```{bash}
+comm -12 outliers_lfmm2_CB_sorted.txt outliers_lfmm2_C_ADD_sorted.txt | wc -l
+```
+
+```{bash}
+comm -12 outliers_lfmm2_CADO_098_sorted.txt outliers_lfmm2_DIS_098_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_096_sorted.txt outliers_lfmm2_DIS_096_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_095_sorted.txt outliers_lfmm2_DIS_093_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_094_sorted.txt outliers_lfmm2_DIS_092_sorted.txt | wc -l
+comm -12 outliers_lfmm2_CADO_09_sorted.txt outliers_lfmm2_DIS_09_sorted.txt | wc -l
+
+# Comparing the largest set of Stress and Disease outliers with the largest combined outliers
+comm -12 outliers_lfmm2_CADO_09_sorted.txt outliers_lfmm2_CB_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_09_sorted.txt outliers_lfmm2_CB_sorted.txt | wc -l
+
+# Comparing the next largest set of Stress and Disease outliers with the combined outliers
+comm -12 outliers_lfmm2_CADO_094_sorted.txt outliers_lfmm2_CB_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_092_sorted.txt outliers_lfmm2_CB_sorted.txt | wc -l
+
+comm -12 outliers_lfmm2_CADO_09_sorted.txt outliers_lfmm2_C_ADD_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_09_sorted.txt outliers_lfmm2_C_ADD_sorted.txt | wc -l
+
+comm -12 outliers_lfmm2_CADO_094_sorted.txt outliers_lfmm2_C_ADD_sorted.txt | wc -l
+comm -12 outliers_lfmm2_DIS_092_sorted.txt outliers_lfmm2_C_ADD_sorted.txt | wc -l
+```
+
+
+# Saving outliers to a BED file
+
+We decided to move forward with the outlier SNPs associated with the combined (binary) treatment, the. 0.98 GIF-modified Stress treatment, and the 0.98 GIF-modified Disease treatment.
+
+The txt files including chromosome and bp position for each of these were made in chunks on line 481 and 489:
+
+`outliers_lfmm2_CB.loci.txt`, `outliers_lfmm2_CADO_098.loci.txt`, and `outliers_lfmm2_DIS_098.loci.txt`.
+
+We'll combine these into a new txt file with all lfmm2 outliers:
+
+```{bash}
+cat outliers_lfmm2_CB.loci.txt outliers_lfmm2_CADO_098.loci.txt outliers_lfmm2_DIS_098.loci.txt > all_lfmm2_outliers
+```
+
+Now, convert it to a bed file:
+
+```{bash}
+awk '{print $1 "\t" $2-1 "\t" $2}' all_lfmm2_outliers | bedtools sort -i - > outliers_lfmm2.bed
+```
+
+
 
 
