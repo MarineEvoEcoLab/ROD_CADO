@@ -161,10 +161,6 @@ screeplot(gen_rod.pca, main = "Screeplot of Genetic Data with Broken Stick", bst
 
 For the genomic data, we can see that one of the PCs have eigenvalues greater than random (greater than the broken stick values in red). This effectively means that K=2 for the genomic data set, based on a PCA assessment. This is because K = 2 is the value where the red “broken stick” is not contained in the values. I'm going to move forward, trying both K = 2 (from broken stick method) and K = 4 (from STRUCTURE analysis). We'll see how the output changes for both.
 
-```{r}
-K <- 4
-```
-
 ### Run LFMM 
 
 Looking at the CADO variable first. We looked at CADO and disease separately, so we will run through this twice. The ridge step takes a little while to run. 
@@ -204,7 +200,7 @@ zscore_rod_CADO <- oys_rod_CADO.pv$score[,1]   # zscores for first predictor, we
 ```
 
 ```{r}
-new.gif <- 1.41           ## choose your new GIF
+new.gif <- 0.98           ## choose your new GIF
 
 # Manual adjustment of the p-values:
 adj.pv_rod_CADO <- pchisq(zscore_rod_CADO^2/new.gif, df=1, lower = FALSE)
@@ -214,7 +210,7 @@ adj.pv_rod_CADO <- pchisq(zscore_rod_CADO^2/new.gif, df=1, lower = FALSE)
 # plot the p-value histograms with the new gif
 hist(oys_rod_CADO.pv$pvalue[,1], main="Unadjusted p-values")        
 hist(oys_rod_CADO.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.08)")
-hist(adj.pv_rod_CADO, main="REadjusted p-values (GIF=1.41)")
+hist(adj.pv_rod_CADO, main="REadjusted p-values (GIF=0.98)")
 ```
 
 An FDR of 10% is usually standard to identify outliers. The FDR threshold can be used to adjust for false positives. q-values represent each SNP’s significance, taking into account the fact that thousands of SNPs are being tested. The steps below establish an FDR threshold. 
@@ -279,7 +275,7 @@ zscore_rod_DIS <- oys_rod_DIS.pv$score[,1]   # zscores for first predictor, we o
 ```
 
 ```{r}
-new.gif <- 0.87           ## choose your new GIF
+new.gif <- 0.98           ## choose your new GIF
 
 # Manual adjustment of the p-values:
 adj.pv_rod_DIS <- pchisq(zscore_rod_DIS^2/new.gif, df=1, lower = FALSE)
@@ -289,7 +285,7 @@ adj.pv_rod_DIS <- pchisq(zscore_rod_DIS^2/new.gif, df=1, lower = FALSE)
 # plot the p-value histograms with the new gif
 hist(oys_rod_DIS.pv$pvalue[,1], main="Unadjusted p-values")        
 hist(oys_rod_DIS.pv$calibrated.pvalue[,1], main="GIF-adjusted p-values (GIF=1.27)")
-hist(adj.pv_rod_DIS, main="REadjusted p-values (GIF=0.87)")
+hist(adj.pv_rod_DIS, main="REadjusted p-values (GIF=0.98)")
 ```
 
 ```{r}
@@ -2050,7 +2046,7 @@ comm -12 outliers_lfmm2_DIS_092_sorted.txt outliers_lfmm2_C_ADD_sorted.txt | wc 
 
 # Saving outliers to a BED file
 
-We decided to move forward with the outlier SNPs associated with the combined (binary) treatment, the. 0.98 GIF-modified Stress treatment, and the 0.98 GIF-modified Disease treatment.
+We decided to move forward with the outlier SNPs associated with the combined (binary) treatment, the 0.98 GIF-modified Stress treatment, and the 0.98 GIF-modified Disease treatment.
 
 The txt files including chromosome and bp position for each of these were made in chunks on line 481 and 489:
 
@@ -2067,6 +2063,42 @@ Now, convert it to a bed file:
 ```{bash}
 awk '{print $1 "\t" $2-1 "\t" $2}' all_lfmm2_outliers | bedtools sort -i - > outliers_lfmm2.bed
 ```
+
+Looking at pcadapt and LFMM outliers
+
+```{bash}
+sort all_lfmm2_outliers > all_outliers_lfmm2_sorted.txt
+sort outlier_pcadapt_thinned_alpha01.loci.txt > all_outliers_pcadapt_sorted.txt
+```
+
+```{bash}
+comm -12 all_outliers_lfmm2_sorted.txt all_outliers_pcadapt_sorted.txt | wc -l
+```
+
+Three directly shared. Going to look for one's that fall within 100 bp intervals.
+
+```{bash}
+awk '{print $1 "\t" $2-1 "\t" $2}' outlier_pcadapt_thinned_alpha01.loci.txt | bedtools sort -i - > outliers_pcadapt.bed
+```
+
+```{bash}
+bedtools slop -b 100 -i <(bedtools sort -i outliers_pcadapt.bed) -g reference.fasta.fai  | bedtools merge -i - >  outliers_pcadapt.loci.intervals.bed
+```
+
+```{bash}
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions all_lfmm2_outliers --out outliers_lfmm2
+```
+
+```{bash}
+vcftools --vcf outliers_lfmm2.recode.vcf --bed outliers_pcadapt.loci.intervals.bed --recode --recode-INFO-all --out ROD_lfmm_pcadapt_shared
+```
+
+Outputting VCF file...
+	Read 70497 BED file entries.
+After filtering, kept 13 out of a possible 115 Sites
+Run Time = 0.00 seconds
+
+
 
 
 
