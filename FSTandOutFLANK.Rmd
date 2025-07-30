@@ -1,0 +1,711 @@
+---
+title: "FST and OutFlank"
+author: "Jon Puritz"
+date: "2025-06-18"
+output: github_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(OutFLANK)
+library(bigsnpr)
+library(plyr)
+library(dplyr)
+library(stringr)
+```
+
+# OutFlank
+
+```{bash}
+cd /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --out TRSdp10g1.FIL.ALL --maf 0.05
+
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --keep <(cut -f1 ../../popmap | grep -v CH | grep -v R[1,2,3] ) --out TRSdp10g1.FIL.CMB --maf 0.05
+
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --keep <(cut -f1 ../../popmap | grep -v CH | grep -v RH ) --out TRSdp10g1.FIL.ROD --maf 0.05
+
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --keep <(cut -f1 ../../popmap | grep -v R ) --out TRSdp10g1.FIL.STR --maf 0.05
+```
+
+
+```{r}
+# Read in bedfile
+rds <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/TRSdp10g1.FIL.ALL.bed", backingfile = tempfile())
+rds.CMB <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/TRSdp10g1.FIL.CMB.bed", backingfile = tempfile())
+rds.ROD <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/TRSdp10g1.FIL.ROD.bed", backingfile = tempfile())
+rds.STR <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/TRSdp10g1.FIL.STR.bed", backingfile = tempfile())
+```
+
+```{r}
+full_bed <- snp_attach(rds)
+G <- full_bed$genotypes
+CHR <- full_bed$map$chromosome
+POS <- full_bed$map$physical.pos
+NCORES <- nb_cores()
+
+CMB_bed <- snp_attach(rds.CMB)
+CHR.CMB <- CMB_bed$map$chromosome
+POS.CMB <-CMB_bed$map$physical.pos
+G.CMB <-CMB_bed$genotypes
+
+
+ROD_bed <- snp_attach(rds.ROD)
+CHR.ROD <- ROD_bed$map$chromosome
+POS.ROD <-ROD_bed$map$physical.pos
+G.ROD <-ROD_bed$genotypes
+
+
+STR_bed <- snp_attach(rds.STR)
+CHR.STR <- STR_bed$map$chromosome
+POS.STR <-STR_bed$map$physical.pos
+G.STR <-STR_bed$genotypes
+
+
+
+
+```
+
+```{r}
+
+svd <- snp_autoSVD(G, as.integer(factor(CHR)), POS, ncores = NCORES,min.mac =8,size=10)
+svd.CMB <- snp_autoSVD(G.CMB, as.integer(factor(CHR.CMB)), POS.CMB, ncores = NCORES,min.mac =4, size=10)
+svd.ROD <- snp_autoSVD(G.ROD, as.integer(factor(CHR.ROD)), POS.ROD, ncores = NCORES,min.mac =4, size=10)
+svd.STR <- snp_autoSVD(G.STR, as.integer(factor(CHR.STR)), POS.STR, ncores = NCORES,min.mac =4,size=10)
+
+```
+
+```{r}
+write(paste(CHR[attr(svd, "subset")],
+            POS[attr(svd, "subset")], sep='\t'),
+      "ThinnedSNPs.maskedPCs.txt")
+
+write(paste(CHR.CMB[attr(svd.CMB2, "subset")],
+            POS.CMB[attr(svd.CMB2, "subset")], sep='\t'),
+      "ThinnedSNPs.CMB.maskedPCs.txt")
+
+write(paste(CHR[attr(svd.ROD, "subset")],
+            POS[attr(svd.ROD, "subset")], sep='\t'),
+      "ThinnedSNPs.ROD.maskedPCs.txt")
+
+write(paste(CHR[attr(svd.STR, "subset")],
+            POS[attr(svd.STR, "subset")], sep='\t'),
+      "ThinnedSNPs.STR.maskedPCs.txt")
+```
+
+```{bash}
+rm *.snps
+
+cut -f1 ThinnedSNPs.maskedPCs.txt| uniq | parallel "grep {} ThinnedSNPs.maskedPCs.txt | shuf  2>/dev/null | shuf 2>/dev/null | shuf 2>/dev/null| head -5000" >> random.50k.snps
+
+cut -f1 ThinnedSNPs.CMB.maskedPCs.txt| uniq | parallel "grep {} ThinnedSNPs.CMB.maskedPCs.txt | shuf  2>/dev/null | shuf 2>/dev/null | shuf 2>/dev/null| head -5000" >> random.50k.CMB.snps
+
+cut -f1 ThinnedSNPs.ROD.maskedPCs.txt| uniq | parallel "grep {} ThinnedSNPs.ROD.maskedPCs.txt | shuf  2>/dev/null | shuf 2>/dev/null | shuf 2>/dev/null| head -5000" >> random.50k.ROD.snps
+
+cut -f1 ThinnedSNPs.STR.maskedPCs.txt| uniq | parallel "grep {} ThinnedSNPs.STR.maskedPCs.txt | shuf  2>/dev/null | shuf 2>/dev/null | shuf 2>/dev/null| head -5000" >> random.50k.STR.snps
+```
+
+```{bash}
+cd /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/
+
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --extract bed0 <(mawk '{print $1"\t"$2-1"\t"$2}' ~/ROD_CADO/random.50k.snps ) --out random50k
+
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --extract bed0 <(mawk '{print $1"\t"$2-1"\t"$2}' ~/ROD_CADO/random.50k.CMB.snps )  --keep <(cut -f1 ../../popmap | grep -v CH | grep -v R[1,2,3] ) --out random50k.CMB
+
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --extract bed0 <(mawk '{print $1"\t"$2-1"\t"$2}' ~/ROD_CADO/random.50k.ROD.snps ) --keep <(cut -f1 ../../popmap | grep -v CH | grep -v RH ) --out random50k.ROD
+
+plink2 --bfile TRSdp10g1.FIL --make-bed --allow-extra-chr --extract bed0 <(mawk '{print $1"\t"$2-1"\t"$2}' ~/ROD_CADO/random.50k.STR.snps ) --keep <(cut -f1 ../../popmap | grep -v R ) --out random50k.STR
+
+cd ~/ROD_CADO
+mawk 'NR==1{print "IND\tPOP"};NR >0 {print $0}' /home/Shared_Data/ROD_CADO/analysis/popmap > popmap.txt
+```
+```{r}
+rds.random <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/random50k.bed", backingfile = tempfile())
+
+random <- snp_attach(rds.random)
+G.r <- random$genotypes
+CHR.r <- random$map$chromosome
+POS.r <- random$map$physical.pos
+
+rds.random.CMB <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/random50k.CMB.bed", backingfile = tempfile())
+
+random.CMB <- snp_attach(rds.random.CMB)
+G.CMB.r <- random.CMB$genotypes
+CHR.CMB.r <- random.CMB$map$chromosome
+POS.CMB.r <- random.CMB$map$physical.pos
+
+rds.random.ROD <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/random50k.ROD.bed", backingfile = tempfile())
+
+random.ROD <- snp_attach(rds.random.ROD)
+G.ROD.r <- random.ROD$genotypes
+CHR.ROD.r <- random.ROD$map$chromosome
+POS.ROD.r <- random.ROD$map$physical.pos
+
+rds.random.STR <- snp_readBed("/home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/random50k.STR.bed", backingfile = tempfile())
+
+random.STR <- snp_attach(rds.random.STR)
+G.STR.r <- random.STR$genotypes
+CHR.STR.r <- random.STR$map$chromosome
+POS.STR.r <- random.STR$map$physical.pos
+```
+
+```{r}
+
+popmap <- read.table("popmap.txt", header=TRUE)
+popmap$TREAT <- c(rep("CON",20),rep("STR",20),rep("ROD",20),rep("STRROD",20))
+
+RODPOP <- c(rep("CON",20),rep("ROD",20))
+STRPOP <- c(rep("CON",20),rep("STR",20))
+CMBPOP <- c(rep("CON",20),rep("CMB",20))
+CMBPOP2 <- c(rep("CON",20),rep("CMB",20),rep("CON2",20),rep("CMB2",20))
+
+
+my_fst <- MakeDiploidFSTMat(G[], locusNames = paste0(CHR,"_", POS), popNames = popmap$TREAT)
+
+#my_fst.r <- MakeDiploidFSTMat(G.r[], locusNames = paste0(CHR.r,"_", POS.r), popNames = popmap$TREAT)
+
+my_fst.CMB <- MakeDiploidFSTMat(G.CMB[], locusNames = paste0(CHR.CMB,"_", POS.CMB), popNames = CMBPOP)
+my_fst.CMB.double <- MakeDiploidFSTMat(rbind(G.CMB[],G.CMB[]), locusNames = paste0(CHR.CMB,"_", POS.CMB), popNames = CMBPOP2)
+
+#my_fst.CMB.r <- MakeDiploidFSTMat(G.CMB.r[], locusNames = paste0(CHR.CMB.r,"_", POS.CMB.r), popNames = CMBPOP)
+
+my_fst.ROD <- MakeDiploidFSTMat(G.ROD[], locusNames = paste0(CHR.ROD,"_", POS.ROD), popNames = RODPOP)
+
+#my_fst.ROD.r <- MakeDiploidFSTMat(G.ROD.r[], locusNames = paste0(CHR.ROD.r,"_", POS.ROD.r), popNames = RODPOP)
+
+my_fst.STR <- MakeDiploidFSTMat(G.STR[], locusNames = paste0(CHR.STR,"_", POS.STR), popNames = STRPOP)
+
+#my_fst.STR.r <- MakeDiploidFSTMat(G.STR.r[], locusNames = paste0(CHR.STR.r,"_", POS.STR.r), popNames = STRPOP)
+
+
+```
+
+
+
+
+```{r}
+save(my_fst, my_fst.CMB, my_fst.ROD,my_fst.STR, file = "FST_data.RData")
+```
+
+```{r}
+load("FST_data.RData")
+
+```
+
+
+```{r}
+out_trim <- OutFLANK(my_fst[attr(svd, which="subset"),], NumberOfSamples=4, qthreshold = 0.1, Hmin = 0.1)
+library(OutFLANKBH)
+out_trim_CMB <- OutFLANKBH::OutFLANK(my_fst.CMB.double[attr(svd.CMB, which="subset"),], NumberOfSamples=2, qthreshold = 0.001, Hmin = 0.01)
+
+out_trim_ROD <- OutFLANKBH::OutFLANK(my_fst.ROD.r, NumberOfSamples=2, qthreshold = 0.001, Hmin = 0.05)
+out_trim_STR <- OutFLANKBH::OutFLANK(my_fst.STR.r, NumberOfSamples=2, qthreshold = 0.001, Hmin = 0.05)
+
+OutFLANKResultsPlotter(out_trim, withOutliers = TRUE,
+                       NoCorr = TRUE, Hmin = 0.1, binwidth = 0.001, Zoom =
+                         FALSE, RightZoomFraction = 0.05, titletext = NULL)
+
+hist(out_trim$results$pvaluesRightTail)
+
+qthres <- 0.1
+
+P1 <- pOutlierFinderChiSqNoCorr(my_fst, Fstbar = out_trim$FSTNoCorrbar, 
+                                   dfInferred = out_trim$dfInferred, qthreshold = qthres, Hmin=0.1)
+
+P1 <- P1[order(as.numeric(rownames(P1))),,drop=FALSE]                  
+hist(P1$pvaluesRightTail)
+```
+```{r}
+OutFLANKResultsPlotter(out_trim_CMB, withOutliers = TRUE,
+                       NoCorr = TRUE, Hmin = 0.05, binwidth = 0.0001, Zoom =
+                         FALSE, RightZoomFraction = 0.25, titletext = NULL)
+
+hist(out_trim_CMB$results$pvaluesRightTail)
+
+qthres <- 0.001
+
+P1_CMB <- pOutlierFinderChiSqNoCorr(my_fst.CMB, Fstbar = out_trim_CMB$FSTNoCorrbar, 
+                                   dfInferred = out_trim_CMB$dfInferred, qthreshold = qthres, Hmin=0.1)
+
+P1_CMB <- P1_CMB[order(as.numeric(rownames(P1_CMB))),,drop=FALSE]                  
+hist(P1_CMB$pvaluesRightTail)
+```
+
+```{r}
+OutFLANKResultsPlotter(out_trim_ROD, withOutliers = TRUE,
+                       NoCorr = TRUE, Hmin = 0.05, binwidth = 0.001, Zoom =
+                         FALSE, RightZoomFraction = 0.05, titletext = NULL)
+
+hist(out_trim_ROD$results$pvaluesRightTail)
+
+qthres <- 0.001
+
+P1_ROD <- pOutlierFinderChiSqNoCorr(my_fst.ROD, Fstbar = out_trim_ROD$FSTNoCorrbar, 
+                                   dfInferred = out_trim_ROD$dfInferred, qthreshold = qthres, Hmin=0.1)
+
+P1_ROD <- P1_ROD[order(as.numeric(rownames(P1_ROD))),,drop=FALSE]                  
+hist(P1_ROD$pvaluesRightTail)
+```
+
+
+```{r}
+OutFLANKResultsPlotter(out_trim_STR, withOutliers = TRUE,
+                       NoCorr = TRUE, Hmin = 0.05, binwidth = 0.001, Zoom =
+                         FALSE, RightZoomFraction = 0.05, titletext = NULL)
+
+hist(out_trim_STR$results$pvaluesRightTail)
+
+qthres <- 0.001
+
+P1_STR <- pOutlierFinderChiSqNoCorr(my_fst.STR, Fstbar = out_trim_STR$FSTNoCorrbar, 
+                                   dfInferred = out_trim_STR$dfInferred, qthreshold = qthres, Hmin=0.1)
+
+P1_STR <- P1_STR[order(as.numeric(rownames(P1_STR))),,drop=FALSE]                  
+hist(P1_STR$pvaluesRightTail)
+```
+
+```{r}
+plot.df<- setNames(data.frame(matrix(ncol = 8, nrow = length(P1$LocusName))), c("CHR", "CHRR", "BP", "SNP", "P", "F", "Q", "Outlier"))
+plot.df$CHR <-as.integer(as.factor(CHR))
+plot.df$CHRR <- CHR
+plot.df$SNP <-P1$LocusName
+plot.df$BP <- POS
+plot.df$P <- P1$pvalues
+plot.df$Q <- P1$qvalues
+plot.df$F <- P1$FST
+plot.df$Outlier <- P1$OutlierFlag
+plot.df <- plot.df[which(plot.df$Outlier == TRUE | plot.df$Outlier == FALSE),]
+
+plot.df.CMB<- setNames(data.frame(matrix(ncol = 8, nrow = length(P1_CMB$LocusName))), c("CHR", "CHRR", "BP", "SNP", "P", "F", "Q", "Outlier"))
+plot.df.CMB$CHR <-as.integer(as.factor(CHR.CMB))
+plot.df.CMB$CHRR <- CHR.CMB
+plot.df.CMB$SNP <-P1_CMB$LocusName
+plot.df.CMB$BP <- POS.CMB
+plot.df.CMB$P <- P1_CMB$pvalues
+plot.df.CMB$Q <- P1_CMB$qvalues
+plot.df.CMB$F <- P1_CMB$FST
+plot.df.CMB$Outlier <- P1_CMB$OutlierFlag
+plot.df.CMB <- plot.df.CMB[which(plot.df.CMB$Outlier == TRUE | plot.df.CMB$Outlier == FALSE),]
+
+plot.df.ROD<- setNames(data.frame(matrix(ncol = 8, nrow = length(P1_ROD$LocusName))), c("CHR", "CHRR", "BP", "SNP", "P", "F", "Q", "Outlier"))
+plot.df.ROD$CHR <-as.integer(as.factor(CHR.ROD))
+plot.df.ROD$CHRR <- CHR.ROD
+plot.df.ROD$SNP <-P1_ROD$LocusName
+plot.df.ROD$BP <- POS.ROD
+plot.df.ROD$P <- P1_ROD$pvalues
+plot.df.ROD$Q <- P1_ROD$qvalues
+plot.df.ROD$F <- P1_ROD$FST
+plot.df.ROD$Outlier <- P1_ROD$OutlierFlag
+plot.df.ROD <- plot.df.ROD[which(plot.df.ROD$Outlier == TRUE | plot.df.ROD$Outlier == FALSE),]
+
+plot.df.STR<- setNames(data.frame(matrix(ncol = 8, nrow = length(P1_STR$LocusName))), c("CHR", "CHRR", "BP", "SNP", "P", "F", "Q", "Outlier"))
+plot.df.STR$CHR <-as.integer(as.factor(CHR.STR))
+plot.df.STR$CHRR <- CHR.STR
+plot.df.STR$SNP <-P1_STR$LocusName
+plot.df.STR$BP <- POS.STR
+plot.df.STR$P <- P1_STR$pvalues
+plot.df.STR$Q <- P1_STR$qvalues
+plot.df.STR$F <- P1_STR$FST
+plot.df.STR$Outlier <- P1_STR$OutlierFlag
+plot.df.STR <- plot.df.STR[which(plot.df.STR$Outlier == TRUE | plot.df.STR$Outlier == FALSE),]
+```
+
+```{r}
+withr::with_options(c(scipen = 10), write(paste(plot.df$CHRR,plot.df$BP-1,plot.df$BP,plot.df$F,plot.df$Outlier, sep='\t'), "FST_Outflank.bed"))
+withr::with_options(c(scipen = 10), write(paste(plot.df.CMB$CHRR,plot.df.CMB$BP-1,plot.df.CMB$BP,plot.df.CMB$F,plot.df.CMB$Outlier, sep='\t'), "FST_Outflank.CMB.bed"))
+withr::with_options(c(scipen = 10), write(paste(plot.df.STR$CHRR,plot.df.STR$BP-1,plot.df.STR$BP,plot.df.STR$F,plot.df.STR$Outlier, sep='\t'), "FST_Outflank.STR.bed"))
+withr::with_options(c(scipen = 10), write(paste(plot.df.ROD$CHRR,plot.df.ROD$BP-1,plot.df.ROD$BP,plot.df.ROD$F,plot.df.ROD$Outlier, sep='\t'), "FST_Outflank.ROD.bed"))
+```
+
+```{bash}
+#mawk -v OFS='\t' {'print $1,$2'} /home/Shared_Data/ROD_CADO/analysis/reference.fasta.fai > genome.file
+#bedtools makewindows -g genome.file -w 10000 | mawk '!/NC_007175.2/' > 10kb.bed
+
+#bedtools intersect -b <(sort -k 1,1 -k2,2n FST_Outflank.bed) -a <(sort -k 1,1 -k2,2n 10kb.bed) -wa -wb -sorted  |bedtools merge -d -1 -c 7,8 -o mean,distinct | mawk '{ if ($0 ~ /TRUE/) {print $1 "\t" $2 "\t" $3 "\t" $4 "\tTRUE"} else {print $0}}' > OF_fst.10kb.bed
+
+#bedtools intersect -b <(sort -k 1,1 -k2,2n FST_Outflank.bed) -a <(sort -k 1,1 -k2,2n 1kb.bed) -wa -wb -sorted  |bedtools merge -d -1 -c 7,8 -o mean,distinct | mawk '{ if ($0 ~ /TRUE/) {print $1 "\t" $2 "\t" $3 "\t" $4 "\tTRUE"} else {print $0}}' > OF_fst.1kb.bed
+
+#bedtools intersect -b <(sort -k 1,1 -k2,2n FST_Outflank.bed) -a <(sort -k 1,1 -k2,2n 100b.bed) -wa -wb -sorted  |bedtools merge -d -1 -c 7,8 -o max,distinct | mawk '{ if ($0 ~ /TRUE/) {print $1 "\t" $2 "\t" $3 "\t" $4 "\tTRUE"} else {print $0}}' > OF_fst.100b.bed
+
+#cat <(echo -e "CHROM\tBIN_START\tBIN_END\tWEIGHTED_FST\tOUTLIER") OF_fst.10kb.bed <(grep TRUE FST_Outflank.bed) > OF_fst.10kb.txt
+
+#cat <(echo -e "CHROM\tBIN_START\tBIN_END\tWEIGHTED_FST\tOUTLIER") OF_fst.1kb.bed  > OF_fst.1kb.txt
+
+#cat <(echo -e "CHROM\tBIN_START\tBIN_END\tWEIGHTED_FST\tOUTLIER") OF_fst.100b.bed  > OF_fst.100b.txt
+
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tWEIGHTED_FST\tOUTLIER") FST_Outflank.bed > outlier_fst.txt
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tWEIGHTED_FST\tOUTLIER") FST_Outflank.CMB.bed > outlier_fst_CMB.txt
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tWEIGHTED_FST\tOUTLIER") FST_Outflank.STR.bed > outlier_fst_STR.txt
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tWEIGHTED_FST\tOUTLIER") FST_Outflank.ROD.bed > outlier_fst_ROD.txt
+```
+
+
+```{r}
+fst <- read.table("outlier_fst.txt", header = TRUE)
+SNP<-c(1:(nrow(fst)))
+mydf<-data.frame(SNP,fst)
+mydf$CHR <- mydf$CHROM
+mydf %>% 
+  mutate(CHR = str_replace(CHR, "NC_035780.1", "1")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035781.1", "2")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035782.1", "3")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035783.1", "4")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035784.1", "5")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035785.1", "6")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035786.1", "7")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035787.1", "8")) %>%
+  mutate(CHR = str_replace(CHR, "NC_035788.1", "9")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035789.1", "10"))  -> mydf
+mydf$CHR <- as.numeric(mydf$CHR)  
+
+# Step 1: Compute chromosome-level metrics
+chr_offsets <- mydf %>%
+  group_by(CHR) %>%
+  summarize(
+    minbp = min(BIN_START, na.rm = TRUE),
+    maxbp = max(BIN_END, na.rm = TRUE),
+    nrows = n()
+  ) %>%
+  mutate(
+    offset = cumsum(nrows) - nrows,
+    bp_range = ifelse(maxbp == minbp, 1, maxbp - minbp)
+  )
+
+# Step 2: Join offset info into the original dataframe and compute BPcum
+don <- mydf %>%
+  left_join(chr_offsets, by = "CHR") %>%
+  mutate(
+    scaled_bp = (as.numeric(BIN_START) - as.numeric(minbp)) * as.numeric(nrows) / as.numeric(bp_range),
+    BPcum = scaled_bp + as.numeric(offset)
+  )
+
+# Step 3: Axis label positions
+axisdf <- don %>%
+  group_by(CHR) %>%
+  summarize(center = mean(BPcum, na.rm = TRUE))
+
+
+
+
+m2<- ggplot(don, aes(x=BPcum, y=WEIGHTED_FST)) +
+  geom_point( aes(color=as.factor(CHR)), alpha=0.25, size=0.5) +
+  geom_point(data=subset(don, OUTLIER==TRUE),aes(color=as.factor(CHR)),shape = 17,alpha=1,size=1.75) +
+  scale_color_manual(values = rep(c("#7d5577", "#52374e"), 5 )) +
+  scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ,expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0),limits=c(min(don$WEIGHTED_FST-0.001,na.rm=TRUE),0.5))+      
+  theme(axis.title.y = element_markdown())+ 
+  guides(colour = "none",alpha="none", fill="none") +
+  labs(x = "Chromosome", y = "*F<sub>ST</sub>*") +
+  theme_classic() +
+  theme(axis.title.y = element_markdown()) 
+    
+
+png(filename="Output/Figures/Figure.5.FST.man.png", type="cairo",units="px", width=5600, height=3000, res=300, bg="transparent")
+m2
+null <- dev.off()
+
+```
+
+```{r}
+fst <- read.table("outlier_fst_CMB.txt", header = TRUE)
+SNP<-c(1:(nrow(fst)))
+mydf<-data.frame(SNP,fst)
+mydf$CHR <- mydf$CHROM
+mydf %>% 
+  mutate(CHR = str_replace(CHR, "NC_035780.1", "1")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035781.1", "2")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035782.1", "3")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035783.1", "4")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035784.1", "5")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035785.1", "6")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035786.1", "7")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035787.1", "8")) %>%
+  mutate(CHR = str_replace(CHR, "NC_035788.1", "9")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035789.1", "10"))  -> mydf
+mydf$CHR <- as.numeric(mydf$CHR)  
+
+# Step 1: Compute chromosome-level metrics
+chr_offsets <- mydf %>%
+  group_by(CHR) %>%
+  summarize(
+    minbp = min(BIN_START, na.rm = TRUE),
+    maxbp = max(BIN_END, na.rm = TRUE),
+    nrows = n()
+  ) %>%
+  mutate(
+    offset = cumsum(nrows) - nrows,
+    bp_range = ifelse(maxbp == minbp, 1, maxbp - minbp)
+  )
+
+# Step 2: Join offset info into the original dataframe and compute BPcum
+don <- mydf %>%
+  left_join(chr_offsets, by = "CHR") %>%
+  mutate(
+    scaled_bp = (as.numeric(BIN_START) - as.numeric(minbp)) * as.numeric(nrows) / as.numeric(bp_range),
+    BPcum = scaled_bp + as.numeric(offset)
+  )
+
+# Step 3: Axis label positions
+axisdf <- don %>%
+  group_by(CHR) %>%
+  summarize(center = mean(BPcum, na.rm = TRUE))
+
+
+
+
+m3<- ggplot(don, aes(x=BPcum, y=WEIGHTED_FST)) +
+  geom_point( aes(color=as.factor(CHR)), alpha=0.25, size=0.5) +
+  geom_point(data=subset(don, OUTLIER==TRUE),aes(color=as.factor(CHR)),shape = 17,alpha=1,size=1.75) +
+  scale_color_manual(values = rep(c("#F0E442", "#e0d614"), 5 )) +
+  scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ,expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0),limits=c(min(don$WEIGHTED_FST-0.001,na.rm=TRUE),0.5))+      
+  theme(axis.title.y = element_markdown())+ 
+  guides(colour = "none",alpha="none", fill="none") +
+  labs(x = "Chromosome", y = "*F<sub>ST</sub>*") +
+  theme_classic() +
+  theme(axis.title.y = element_markdown()) 
+    
+
+png(filename="Output/Figures/Figure.5.FST.STRROD.man.png", type="cairo",units="px", width=5600, height=3000, res=300, bg="transparent")
+m3
+null <- dev.off()
+
+```
+
+
+```{r}
+fst <- read.table("outlier_fst_STR.txt", header = TRUE)
+SNP<-c(1:(nrow(fst)))
+mydf<-data.frame(SNP,fst)
+mydf$CHR <- mydf$CHROM
+mydf %>% 
+  mutate(CHR = str_replace(CHR, "NC_035780.1", "1")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035781.1", "2")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035782.1", "3")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035783.1", "4")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035784.1", "5")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035785.1", "6")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035786.1", "7")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035787.1", "8")) %>%
+  mutate(CHR = str_replace(CHR, "NC_035788.1", "9")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035789.1", "10"))  -> mydf
+mydf$CHR <- as.numeric(mydf$CHR)  
+
+# Step 1: Compute chromosome-level metrics
+chr_offsets <- mydf %>%
+  group_by(CHR) %>%
+  summarize(
+    minbp = min(BIN_START, na.rm = TRUE),
+    maxbp = max(BIN_END, na.rm = TRUE),
+    nrows = n()
+  ) %>%
+  mutate(
+    offset = cumsum(nrows) - nrows,
+    bp_range = ifelse(maxbp == minbp, 1, maxbp - minbp)
+  )
+
+# Step 2: Join offset info into the original dataframe and compute BPcum
+don <- mydf %>%
+  left_join(chr_offsets, by = "CHR") %>%
+  mutate(
+    scaled_bp = (as.numeric(BIN_START) - as.numeric(minbp)) * as.numeric(nrows) / as.numeric(bp_range),
+    BPcum = scaled_bp + as.numeric(offset)
+  )
+
+# Step 3: Axis label positions
+axisdf <- don %>%
+  group_by(CHR) %>%
+  summarize(center = mean(BPcum, na.rm = TRUE))
+
+
+
+
+m4<- ggplot(don, aes(x=BPcum, y=WEIGHTED_FST)) +
+  geom_point( aes(color=as.factor(CHR)), alpha=0.25, size=0.5) +
+  geom_point(data=subset(don, OUTLIER==TRUE),aes(color=as.factor(CHR)),shape = 17,alpha=1,size=1.75) +
+  scale_color_manual(values = rep(c("#56B4E9", "#0093e6"), 5 )) +
+  scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ,expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0),limits=c(min(don$WEIGHTED_FST-0.001,na.rm=TRUE),0.5))+      
+  theme(axis.title.y = element_markdown())+ 
+  guides(colour = "none",alpha="none", fill="none") +
+  labs(x = "Chromosome", y = "*F<sub>ST</sub>*") +
+  theme_classic() +
+  theme(axis.title.y = element_markdown()) 
+    
+
+png(filename="Output/Figures/Figure.5.FST.STRCON.man.png", type="cairo",units="px", width=5600, height=3000, res=300, bg="transparent")
+m4
+null <- dev.off()
+
+```
+
+```{r}
+fst <- read.table("outlier_fst_ROD.txt", header = TRUE)
+SNP<-c(1:(nrow(fst)))
+mydf<-data.frame(SNP,fst)
+mydf$CHR <- mydf$CHROM
+mydf %>% 
+  mutate(CHR = str_replace(CHR, "NC_035780.1", "1")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035781.1", "2")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035782.1", "3")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035783.1", "4")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035784.1", "5")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035785.1", "6")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035786.1", "7")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035787.1", "8")) %>%
+  mutate(CHR = str_replace(CHR, "NC_035788.1", "9")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035789.1", "10"))  -> mydf
+mydf$CHR <- as.numeric(mydf$CHR)  
+
+# Step 1: Compute chromosome-level metrics
+chr_offsets <- mydf %>%
+  group_by(CHR) %>%
+  summarize(
+    minbp = min(BIN_START, na.rm = TRUE),
+    maxbp = max(BIN_END, na.rm = TRUE),
+    nrows = n()
+  ) %>%
+  mutate(
+    offset = cumsum(nrows) - nrows,
+    bp_range = ifelse(maxbp == minbp, 1, maxbp - minbp)
+  )
+
+# Step 2: Join offset info into the original dataframe and compute BPcum
+don <- mydf %>%
+  left_join(chr_offsets, by = "CHR") %>%
+  mutate(
+    scaled_bp = (as.numeric(BIN_START) - as.numeric(minbp)) * as.numeric(nrows) / as.numeric(bp_range),
+    BPcum = scaled_bp + as.numeric(offset)
+  )
+
+# Step 3: Axis label positions
+axisdf <- don %>%
+  group_by(CHR) %>%
+  summarize(center = mean(BPcum, na.rm = TRUE))
+
+
+
+
+m5<- ggplot(don, aes(x=BPcum, y=WEIGHTED_FST)) +
+  geom_point( aes(color=as.factor(CHR)), alpha=0.25, size=0.5) +
+  geom_point(data=subset(don, OUTLIER==TRUE),aes(color=as.factor(CHR)),shape = 17,alpha=1,size=1.75) +
+  scale_color_manual(values = rep(c("#E69F00", "#9e6202"), 5 )) +
+  scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ,expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0),limits=c(min(don$WEIGHTED_FST-0.001,na.rm=TRUE),0.5))+      
+  theme(axis.title.y = element_markdown())+ 
+  guides(colour = "none",alpha="none", fill="none") +
+  labs(x = "Chromosome", y = "*F<sub>ST</sub>*") +
+  theme_classic() +
+  theme(axis.title.y = element_markdown()) 
+    
+
+png(filename="Output/Figures/Figure.5.FST.CONROD.man.png", type="cairo",units="px", width=5600, height=3000, res=300, bg="transparent")
+m5
+null <- dev.off()
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+library(ggman)
+library(ggplot2)
+library(ggtext)
+#fst <- read.table("OF_fst.10kb.txt", header = TRUE)
+#fst <- read.table("OF_fst.100b.txt", header = TRUE)
+
+
+SNP<-c(1:(nrow(fst)))
+mydf<-data.frame(SNP,fst)
+mydf$CHR <- mydf$CHROM
+mydf %>% 
+  mutate(CHR = str_replace(CHR, "NC_035780.1", "1")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035781.1", "2")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035782.1", "3")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035783.1", "4")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035784.1", "5")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035785.1", "6")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035786.1", "7")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035787.1", "8")) %>%
+  mutate(CHR = str_replace(CHR, "NC_035788.1", "9")) %>% 
+  mutate(CHR = str_replace(CHR, "NC_035789.1", "10"))  -> mydf
+mydf$CHR <- as.numeric(mydf$CHR)  
+
+mydf %>% 
+  filter(WEIGHTED_FST > 0)
+
+m2 <-ggman(mydf,chrom="CHR",bp="BIN_START",pvalue="WEIGHTED_FST",snp="SNP",logTransform=FALSE,sigLine=NA, relative.positions = TRUE)
+
+dfm <- m2[[1]]
+dfm$chrom_alt <- factor(dfm$chrom_alt, levels=c(0,1))
+
+dfmsplit <- split(dfm, dfm$chrom)
+xbreaks <- sapply(dfmsplit,function(x) {
+    midpoint <- length(x$index)/2
+    if(midpoint <1) midpoint <- 1
+    return(x$index[midpoint])
+})
+
+m2.total <- ggplot(dfm, aes(x= index, y=marker, colour = as.factor(chrom_alt)))+
+  geom_point(size=0.5, aes(alpha=0.25))+  
+  scale_x_continuous(breaks = xbreaks, labels = names(xbreaks),expand = c(0,0),limits = c(0,max(dfm$index)+10)) +
+  guides(colour = "none",alpha="none", fill="none") +
+  scale_y_continuous(expand = c(0,0),limits=c(min(dfm$marker-0.001,na.rm=TRUE),0.5))+
+  labs(x = "Chromosome") +
+  theme_classic()+
+  labs(y="*F<sub>ST</sub>*") +theme(axis.title.y = element_markdown())+ 
+  scale_color_manual(values=c("#7d5577", "#52374e")) 
+
+mydf.sig <- mydf[which(mydf$OUTLIER == TRUE),]
+mydf.sig$snp <- mydf.sig$SNP
+dfm.sub <- merge(dfm,mydf.sig, by = "snp")
+
+cat("Number of Significant 10kb windows in Masked Genome")
+nrow(mydf.sig)
+
+```
+
+```{r}
+library(zoo)
+window_size <- 1000  # adjust based on your data density
+
+dfm <- dfm[order(dfm$index), ]  # ensure it's sorted
+dfm$rollmean_marker <- rollmean(dfm$marker, k = window_size, fill = NA, align = "center")
+
+m2.total <- ggplot(dfm, aes(x= index, y=marker, colour = as.factor(chrom_alt))) +
+  #geom_point(size=0.5, aes(alpha=0.25)) +  
+  geom_line(aes(y = rollmean_marker), color = "black", linewidth = 0.6, na.rm = TRUE) +
+  scale_x_continuous(breaks = xbreaks, labels = names(xbreaks), expand = c(0,0), limits = c(0,max(dfm$index)+10)) +
+  scale_y_continuous(expand = c(0,0), limits = c(min(dfm$marker - 0.001, na.rm = TRUE), 0.75)) +
+  guides(colour = "none", alpha = "none", fill = "none") +
+  labs(x = "Chromosome", y = "*F<sub>ST</sub>*") +
+  theme_classic() +
+  theme(axis.title.y = element_markdown()) +
+  scale_color_manual(values = c("#7d5577", "#52374e"))
+
+
+
+```
+
+
+
