@@ -69,7 +69,7 @@ plot(project_rod, col = "blue", pch = 19, cex = 1.2)
 #dev.off()
 ```
 
-Based on the plot of cross-entropy, K = 5 or K = 7 has the lowest cross-entropy value. After talking to Jon,  it was suggested to interpret this plot more like a scree plot. In that case, we would choose K = 4 which also corresponds to the number of treatments.
+Based on the plot of cross-entropy, K = 5 or K = 7 has the lowest cross-entropy value. After talking to Jon,  it was suggested to interpret this plot more like a scree plot. In that case, we would choose K = 4 which also corresponds to the number of treatments. We interpret this like a scree plot, so we look for where the elbow of the plot is. 
 
 Determining K is a key step for LFMM. LFMM accounts for the background associations seen in genetic vatiation with environmental variation using latent factors to model the unobserved variation/background structure. We must determine the amount of latent factors to include, and this in turn influences the power of the test. It is recommended to first start by using the number of population clusters, K from the structure analysis as the initial value, the consider Ks slightly higher or lower to control power and error. snmf is a function in LEA that estimates K. 
 
@@ -88,13 +88,13 @@ axis(1, at = 1:length(bp_rod$order), labels = bp_rod$order, las=1, cex.axis = .3
    
 ## Prepping environmental data
 
-We are making a strata file with the treatment information for each sample. In a text editor, we made a dataframe with 4 columns: Individual, Population (Treatment Replicate), CADO, and Disease. Individual was each sample name. Population was the corresponding treatment replicate. CADO was a binary classification: 0 for no Stress, 1 for Stress. Disease was a binary classification: 0 for no disease challenge, 1 for disease challenge. We then added the dataframe as a .txt file using `nano`:
+We are making a strata file with the treatment information for each sample. In a text editor, we made a dataframe with 5 columns: Individual, Population (Treatment Replicate), CADO, Disease, and the combination of CADO and disease. Individual was each sample name. Population was the corresponding treatment replicate. CADO was a binary classification: 0 for no Stress, 1 for Stress. Disease was a binary classification: 0 for no disease challenge, 1 for disease challenge. We then added the dataframe as a .txt file using `nano`:
 
 ```{bash}
 nano strata_ROD
 ```
 
-The colummns need to be tab delimited:
+The colummns need to be tab delimited. We ensured this with the following line: 
 
 ```{bash}
 sed 's/ \+/\t/g' strata_ROD > strata_ROD_tab
@@ -123,6 +123,8 @@ I am following steps documented by B.R. Forester [here](https://bookdown.org/hhw
 # }
 ```
 
+loading in packages: 
+
 ```{r}
 library(vegan)    
 library(lfmm)     # Used to run LFMM
@@ -135,12 +137,12 @@ library(vcfR)
 ```{r}
 gen_rod<-read.delim("snp_rod.lfmm",header = FALSE)
 ```
-
+Setting the dimensions of the matrix below. The rows ar ethe individuals and the columns are the number of SNPs overall. 
 ```{r}
 row.names(gen_rod) <- clim.env_rod$Individual # Adding individual names to rows of matrix
 dim(gen_rod)
 ```
-
+Then, we save each environmental variable as a single variable for use in LFMM. 
 ```{r}
 # Save each predictor as its own variable
 CADO <- clim.env_rod$CADO
@@ -162,9 +164,10 @@ screeplot(gen_rod.pca, main = "Screeplot of Genetic Data with Broken Stick", bst
 For the genomic data, we can see that one of the PCs have eigenvalues greater than random (greater than the broken stick values in red). This effectively means that K=2 for the genomic data set, based on a PCA assessment. This is because K = 2 is the value where the red “broken stick” is not contained in the values. I'm going to move forward, trying both K = 2 (from broken stick method) and K = 4 (from STRUCTURE analysis). We'll see how the output changes for both.
 
 ### Run LFMM 
-
+First, we ran LFMM on the stress variable. 
 Looking at the CADO variable first. We looked at CADO and disease separately, so we will run through this twice. The ridge step takes a little while to run. 
 
+Below, where we set K to 4, this is so we can reference it later. 
 ```{r}
 oys_rod_CADO.lfmm <- lfmm_ridge(Y=gen_rod, X=CADO, K=4) ## change K as you see fit
 ```
@@ -205,7 +208,7 @@ new.gif <- 0.98           ## choose your new GIF
 # Manual adjustment of the p-values:
 adj.pv_rod_CADO <- pchisq(zscore_rod_CADO^2/new.gif, df=1, lower = FALSE)
 ```
-
+Below, we calculate the new p-values based on the adjusted GIF. We decided to go with a GIF of 0.98. 
 ```{r}
 # plot the p-value histograms with the new gif
 hist(oys_rod_CADO.pv$pvalue[,1], main="Unadjusted p-values")        
@@ -343,7 +346,7 @@ There should be a relatively flat histogram (most loci not under selection) with
 zscore_rod_CB <- oys_rod_CB.pv$score[,1]   # zscores for first predictor, we only have one in our case...
 (gif_rod_CB <- oys_rod_CB.pv$gif[1])       ## d.fault GIF for this predictor
 ```
-
+The original GIF had 107 outliers. We ended up going with this GIF, but below we try another GIF to confirm this. 
 ```{r}
 new.gif <- 1.00           ## choose your new GIF
 
@@ -573,7 +576,7 @@ Stress <- c(rep("No", 20),rep("Yes", 20),rep("No", 20),rep("Yes", 20))
 
 Disease <- c(rep("No", 20),rep("No", 20),rep("Yes", 20),rep("Yes", 20))
 ```
-
+Below, we try different GIF values for the different treatments. 
 # CADO variable 0.98 GIF
 
 ```{r}
@@ -586,7 +589,7 @@ rad_out_lfmm_CADO_098.filt <- vcfR2genind(vcf_out_lfmm_CADO_098, strata = strata
 
 rad_out_lfmm_CADO_098.filt
 ```
-
+Below, we plot a PCA. 
 ```{r}
 # Plot a PCA for the all outlier loci
 x_out_lfmm_CADO_098 <- scaleGen(rad_out_lfmm_CADO_098.filt, NA.method = "mean")
@@ -2052,7 +2055,7 @@ The txt files including chromosome and bp position for each of these were made i
 
 `outliers_lfmm2_CB.loci.txt`, `outliers_lfmm2_CADO_098.loci.txt`, and `outliers_lfmm2_DIS_098.loci.txt`.
 
-We'll combine these into a new txt file with all lfmm2 outliers:
+We'll combine all three LFMM2 outliers into a new combined txt file with all lfmm2 outliers called 'all_lfmm2_outliers':
 
 ```{bash}
 cat outliers_lfmm2_CB.loci.txt outliers_lfmm2_CADO_098.loci.txt outliers_lfmm2_DIS_098.loci.txt > all_lfmm2_outliers
@@ -2075,7 +2078,7 @@ sort outlier_pcadapt_thinned_alpha01.loci.txt > all_outliers_pcadapt_sorted.txt
 comm -12 all_outliers_lfmm2_sorted.txt all_outliers_pcadapt_sorted.txt | wc -l
 ```
 
-Three directly shared. Going to look for one's that fall within 100 bp intervals.
+Three outliers directly shared. Going to look for one's that fall within 100 bp intervals.
 
 ```{bash}
 awk '{print $1 "\t" $2-1 "\t" $2}' outlier_pcadapt_thinned_alpha01.loci.txt | bedtools sort -i - > outliers_pcadapt.bed
