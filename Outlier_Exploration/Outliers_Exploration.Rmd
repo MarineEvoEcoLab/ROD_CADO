@@ -1,0 +1,79 @@
+---
+title: "ROD CADO Outlier Exploration"
+author: "Amy Zyck"
+date: '2025-08-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ROD CADO Outlier Exploration
+
+Looking for overlapping outlier SNPs identified through LFMM, pcadapt, and Outflank:
+
+Bed file locations:
+
+[LFMM2](https://github.com/MarineEvoEcoLab/ROD_CADO/blob/main/Outlier_detection/outliers_lfmm2.bed)
+[pcadapt](https://github.com/MarineEvoEcoLab/ROD_CADO/blob/main/PCA_analysis/outlier_pcadapt_thinned_alpha01.loci.txt)
+[OutFlank](https://github.com/MarineEvoEcoLab/ROD_CADO/blob/main/FST_Outflank.bed)
+
+**Converting pcadapt txt file to bed format**
+
+```{bash}
+awk '{print $1 "\t" $2-1 "\t" $2}' outlier_pcadapt_thinned_alpha01.loci.txt | bedtools sort -i - > outliers_pcadapt.bed
+```
+
+**Extracting Outflank outliers from bed file**
+
+Jon had made a bed file for all the OutFlank SNPs. Located on Github. The bed file was a Git LFS pointer file, which is basically a way to make larger files in the repo smaller for your local copy. To access the larger version of the file, I did:
+
+```{bash}
+git lfs install
+git lfs pull
+```
+
+This file contains the chromosome, bp positions, Fst calculations, and designations of outlier SNPs (TRUE v FALSE) for each SNP in the analysis. I want to extract the SNPs that are specifically outliers (TRUE), and save the chromosome and bp position columns to a new file:
+
+```{bash}
+awk '$5=="TRUE"{print $1"\t"$2"\t"$3}' FST_Outflank.bed > Outflank_outliers.bed
+```
+
+Now it matches the format of the LFMM and pcadapt outlier bed files. 
+
+
+Looking at outliers that are overlapped across the three detection programs:
+
+```{bash}
+# First sort each bed file so they're all in the same order
+sort Outflank_outliers.bed > outliers_outflank_sorted.txt
+sort outliers_lfmm2.bed > outliers_lfmm2_sorted.txt
+sort outliers_pcadapt.bed > outliers_pcadapt_sorted.txt
+```
+
+```{bash}
+comm -12 outliers_pcadapt_sorted.txt outliers_lfmm2_sorted.txt | wc -l
+```
+
+Three shared outlier SNPs between pcadapt and LFMM2.
+
+```{bash}
+comm -12 outliers_pcadapt_sorted.txt outliers_lfmm2_sorted.txt
+```
+
+```{bash}
+comm -12 outliers_outflank_sorted.txt outliers_lfmm2_sorted.txt | wc -l
+```
+
+No shared outlier SNPs between outflank and LFMM2.
+
+```{bash}
+comm -12 outliers_pcadapt_sorted.txt outliers_outflank_sorted.txt | wc -l
+```
+
+Five shared outlier SNPs between pcadapt and outflank.
+
+```{bash}
+comm -12 outliers_pcadapt_sorted.txt outliers_outflank_sorted.txt
+```
