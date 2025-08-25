@@ -108,10 +108,16 @@ cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tN_SITES\tN_SNPs\tHET\tTREAT") <(mawk '{if (NR>1)print $0 "\tSTRROD"}' ./treat_heterozygosity/STRROD.het) > ./treat_heterozygosity/STRROD-treat.het
 ```
 
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/treat_heterozygosity
+mkdir -p mean_treat_het
 
+bedtools merge -i <(mawk '!/CHR/' CONCON-treat.het| sort -k1,1 -k2,2n ) -c 4,5,7 -d -1 -o mean,mean,first > ../mean_treat_het/mean.CONCON.het
+bedtools merge -i <(mawk '!/CHR/' STRCON-treat.het| sort -k1,1 -k2,2n ) -c 4,5,7 -d -1 -o mean,mean,first > ../mean_treat_het/mean.STRCON.het
+bedtools merge -i <(mawk '!/CHR/' CONROD-treat.het| sort -k1,1 -k2,2n ) -c 4,5,7 -d -1 -o mean,mean,first > ../mean_treat_het/mean.CONROD.het
+bedtools merge -i <(mawk '!/CHR/' STRROD-treat.het| sort -k1,1 -k2,2n ) -c 4,5,7 -d -1 -o mean,mean,first > ../mean_treat_het/mean.STRROD.het
 
-
-
+```
 
 ## Plotting 
 ```{r}
