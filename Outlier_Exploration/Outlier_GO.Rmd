@@ -288,7 +288,22 @@ GO_plot_pi<-ggplot(merged_out_genes, aes(x = Term, y = -log(Fisher), size = prop
   coord_flip(); GO_plot_pi
 ```
 
+Lastly, I'm just going to save the figure as a .png
 
+```{r}
+# Open PNG device with high resolution and transparent background
+png(filename = "GO_plot_pi.png",
+    width = 2000,   # width in pixels (adjust for desired size)
+    height = 2000,  # height in pixels
+    res = 200,      # resolution in dpi for high quality
+    bg = "transparent")  # transparent background
+
+# Print the plot object
+print(GO_plot_pi)
+
+# Close the device to finalize the file
+dev.off()
+```
 
 
 
