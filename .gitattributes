@@ -1,2 +1,8 @@
 *.bed filter=lfs diff=lfs merge=lfs -text
+<<<<<<< HEAD
 Outlier_detection/loci.plus.index filter=lfs diff=lfs merge=lfs -text
+=======
+*.txt filter=lfs diff=lfs merge=lfs -text
+*.gz filter=lfs diff=lfs merge=lfs -text
+*txt filter=lfs diff=lfs merge=lfs -text
+>>>>>>> 91749d63c2d3f91001e000bdd88929a773e9e67b

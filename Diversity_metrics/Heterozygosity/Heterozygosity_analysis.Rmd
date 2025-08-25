@@ -142,20 +142,58 @@ cd /home/ccaillon/ROD_CADO_CC_working/treat_heterozygosity/
 cp treatment.het /home/ccaillon/ROD_CADO_CC_working/Output/Heterozygosity
 ```
 
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/Output/Heterozygosity/
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") treatment.het > treatment.het.txt
+cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") mean.treatment.het > mean.treatment.het.txt
+```
+
 ## Table
 ```{r}
+setwd("~/ROD_CADO_CC_working/Output/Heterozygosity")
+
 #read table into R
-het.df<-read.table(paste("treatment.tajima", sep=""), sep="\t", header=T)
-summary(tajd.df)
+het.df<-read.table(paste("treatment.het", sep=""), sep="\t", header=T)
+summary(het.df)
 #set up dataframe for ggplot
-tajd.df$TREAT <- factor(tajd.df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
+het.df$TREAT <- factor(het.df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
 
 #read table into R 
-mean.tajd.df<-read.table(paste("mean.treatment.tajima", sep=""), sep="\t", header=T)
+mean.het.df<-read.table(paste("mean.treatment.het", sep=""), sep="\t", header=T)
 #set up df for ggplot
-mean.tajd.df$TREAT <- factor(mean.tajd.df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
-summary(mean.tajd.df)
+mean.het.df$TREAT <- factor(mean.het.df$TREAT, levels=c("CONCON", "STRCON", "CONROD", "STRROD"))
+summary(mean.het.df)
 ```
+
+# treatment.het
+CHROM            BIN_START            BIN_END              N_SNPs             HET        
+ NC_035784.1:12202592   Min.   :       36   Min.   :       37   Min.   :0.00000   Min.   :0.0000  
+ NC_035782.1: 8074184   1st Qu.: 18450338   1st Qu.: 18450339   1st Qu.:0.04875   1st Qu.:0.0500  
+ NC_035781.1: 7688972   Median : 36585803   Median : 36585804   Median :0.13875   Median :0.1500  
+ NC_035780.1: 7418040   Mean   : 37805567   Mean   : 37805568   Mean   :0.19692   Mean   :0.2324  
+ NC_035783.1: 7349464   3rd Qu.: 54560924   3rd Qu.: 54560925   3rd Qu.:0.34875   3rd Qu.:0.4000  
+ NC_035787.1: 4655964   Max.   :104145289   Max.   :104145290   Max.   :0.50000   Max.   :1.0000  
+ (Other)    :11134320                                                                             
+    TREAT         
+ CONCON:14630884  
+ CONROD:14630884  
+ STRCON:14630884  
+ STRROD:14630884  
+
+# mean.treatment.het
+         CHROM            BIN_START            BIN_END             EXP_HET           OBS_HET      
+ NC_035784.1:12202592   Min.   :       36   Min.   :       37   Min.   :0.00000   Min.   :0.0000  
+ NC_035782.1: 8074184   1st Qu.: 18450338   1st Qu.: 18450339   1st Qu.:0.04875   1st Qu.:0.0500  
+ NC_035781.1: 7688972   Median : 36585803   Median : 36585804   Median :0.13875   Median :0.1500  
+ NC_035780.1: 7418040   Mean   : 37805567   Mean   : 37805568   Mean   :0.19692   Mean   :0.2324  
+ NC_035783.1: 7349464   3rd Qu.: 54560924   3rd Qu.: 54560925   3rd Qu.:0.34875   3rd Qu.:0.4000  
+ NC_035787.1: 4655964   Max.   :104145289   Max.   :104145290   Max.   :0.50000   Max.   :1.0000  
+ (Other)    :11134320                                                                             
+    TREAT         
+ CONCON:14630884  
+ STRCON:14630884  
+ CONROD:14630884  
+ STRROD:14630884  
 
 ## Plotting 
 ```{r}
