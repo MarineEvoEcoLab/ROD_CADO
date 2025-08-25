@@ -30,6 +30,10 @@ library(tidyverse)
 library(dplyr)
 library(qvalue)
 library(vcfR)
+library(lfmm) 
+#library(LEA)
+library(vegan) 
+library(adegenet)
 ```
 
 **Converting pcadapt txt file to bed format**
@@ -97,51 +101,93 @@ comm -12 outliers_pcadapt_sorted.txt outliers_outflank_sorted.txt
 #ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz .
 vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --bed outliers_lfmm2.bed --recode --recode-INFO-all --out outliers_lfmm2.recode.bed
 ```
+```{r}
+vcf_out_lfmm_C_ADD <- read.vcfR("outliers_lfmm2.recode.bed.recode.vcf")
+```
 
-
-
-## PCA plot of LFMM outliers
-
-Load bed files into objects
+## Setting up strata_ROD and other objects
 
 ```{r}
-path_to_file <- "/home/jgreen/ROD_CADO/Outlier_Exploration/outliers_lfmm2.recode.bed.recode.vcf"
-lfmm_snps <- read.pcadapt(path_to_file, type = "vcf")
+# Setting up strata file - population info and environmental data 
+strata_ROD <- read.table("strata_ROD_tab", header=TRUE)
 ```
 
 ```{r}
-res_lfmm <- pcadapt(lfmm_snps, K = 5)
-plot(res_lfmm, option = "screeplot")
+pop <- c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20))
 ```
-
-# Add popnames
-```{r}
-table <- read.table("/home/jgreen/ROD_CADO_working/Nucleotide_diversity/popmap_files/treat_popmap", header = FALSE)
-poplist.names <- table[,2]
-poplist.names
-
-plot(res_lfmm, option = "scores", pop = poplist.names)
-```
-
-# Analyze loadings
-```{r}
-par(mfrow = c(3, 2))
-for (i in 1:5)
-  plot(res_lfmm$loadings[, i], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
-```
-
-# Investigate PC1, PC2, and PC3
 
 ```{r}
-plot(res_lfmm$loadings[, 1], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
-plot(res_lfmm$loadings[, 2], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
-plot(res_lfmm$loadings[, 3], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+Stress <- c(rep("No", 20),rep("Yes", 20),rep("No", 20),rep("Yes", 20))
+
+Disease <- c(rep("No", 20),rep("No", 20),rep("Yes", 20),rep("Yes", 20))
 ```
 
-## Plot PCA
 
 ```{r}
-plot(res_lfmm, option = "scores", pop = poplist.names)
+rad_out_lfmm_C_ADD.filt <- vcfR2genind(vcf_out_lfmm_C_ADD, strata = strata_ROD, pop = c(rep("C", 20),rep("CH", 20),rep("R", 20),rep("RH", 20)))
+
+rad_out_lfmm_C_ADD.filt
 ```
 
+```{r}
+# Plot a PCA for the all outlier loci
+x_out_lfmm_C_ADD <- scaleGen(rad_out_lfmm_C_ADD.filt, NA.method = "mean")
+out_lfmm_C_ADD_pca <- dudi.pca(x_out_lfmm_C_ADD, center = FALSE, scale = FALSE, scannf = FALSE, nf = 4)
+eig_percent_out_lfmm_C_ADD <- round((out_lfmm_C_ADD_pca$eig / (sum(out_lfmm_C_ADD_pca$eig))) * 100, 2)
+
+pca_dat_out_lfmm_C_ADD <- as.data.frame(out_lfmm_C_ADD_pca$li) %>%
+                    rownames_to_column(var = "ind") %>%
+                    cbind(pop = pop(rad_out_lfmm_C_ADD.filt)) %>%
+                    mutate(pop = factor(pop, levels = c("C", "CH","R", "RH")))
+
+pca_dat_out_lfmm_C_ADD <- pca_dat_out_lfmm_C_ADD %>%
+  mutate(Combined = ifelse(pop %in% c("RH"), "Yes", "No"))
+```
+
+```{r}
+pc_scores_C_ADD <- out_lfmm_C_ADD_pca$li
+```
+
+```{r}
+permanova_result_C_ADD <- adonis2(pc_scores_C_ADD ~ pop, method = "euclidean")
+print(permanova_result_C_ADD)
+```
+
+```{r}
+permanova_result_C_ADD <- adonis2(pc_scores_C_ADD ~ Combined, method = "euclidean")
+print(permanova_result_C_ADD)
+```
+
+```{r}
+pca_data_C_ADD <- data.frame(PC1 = pc_scores_C_ADD[,1], PC2 = pc_scores_C_ADD[,2], Treatment = pop)
+
+# Define new treatment names
+treatment_names <- c("C" = "CONCON",
+                         "CH" = "STRCON",
+                         "R" = "CONROD",
+                         "RH" = "STRROD")
+
+# Define custom colors
+custom_colors <- c("C" = "#0072B2", "CH" = "#56B4E9", "R" = "#E69F00", "RH" = "#F0E442")
+
+# Extract p-value from PERMANOVA result
+p_value_C_ADD <- permanova_result_C_ADD$`Pr(>F)`[1]
+
+eigenvalues_C_ADD <- eigen(cov(pca_data_C_ADD[, c("PC1", "PC2")]))$values
+
+# Calculate proportion of variance explained
+pve_C_ADD <- eigenvalues_C_ADD / sum(eigenvalues_C_ADD) * 100
+
+# Create the plot with proportion of variance on axes
+ggplot(pca_data_C_ADD, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point() +
+  stat_ellipse() +
+  theme_minimal() +
+  scale_color_manual(values = custom_colors, labels = treatment_names) +
+  xlab(paste0("PC1 (", round(pve_C_ADD[1], 2), "%)")) +
+  ylab(paste0("PC2 (", round(pve_C_ADD[2], 2), "%)")) +
+  annotate("text", x = -Inf, y = -Inf, 
+           label = paste("PERMANOVA\n p =", format(p_value_C_ADD, digits = 2)),
+           hjust = -0.1, vjust = -1)
+```
 
