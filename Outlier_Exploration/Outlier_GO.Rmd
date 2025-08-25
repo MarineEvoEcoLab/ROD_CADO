@@ -1,0 +1,295 @@
+---
+title: "ROD CADO GO Analysis"
+author: "Amy Zyck"
+date: '2025-08-25'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We will be performing Gene Ontology analysis on outlier SNPs identified using Outflank and LFMM2:
+
+Separate .bed files for each program are located [here](https://github.com/MarineEvoEcoLab/ROD_CADO/tree/main/Outlier_Exploration).
+
+First, I'm going to make a combined .bed file containing all outlier SNPs.
+
+```{bash}
+cat outliers_lfmm2.bed Outflank_outliers.bed > ROD_CADO_outliers.bed
+```
+
+## Identifying genes for candidate loci
+
+We need a bed file containing the gene inforamtion for all SNPs in the oyster genome. I had one that I copied over from a previous project, called `sorted.ref3.0.gene.bed`. I will add in info for how to obtain that file. 
+
+```{bash}
+bedtools intersect -wb -a ROD_CADO_outliers.bed -b sorted.ref3.0.gene.bed | grep -oh "gene=LOC.*;g" | sed 's/gene=//g' | sed 's/;g//g' | sort | uniq > Sig.gene.ROD.CADO.LOC
+
+cat Sig.gene.ROD.CADO.LOC | wc -l
+```
+
+144 genes 
+
+
+## Gene Ontology with TopGO
+
+I have a gaf from NCBI with the GO terms for genes in the eastern oyster genome. I'm going to take this file and extract the Gene IDs and associated GO terms.
+
+In terminal:
+
+```{bash}
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/002/022/765/GCF_002022765.2_C_virginica-3.0/GCF_002022765.2_C_virginica-3.0_gene_ontology.gaf.gz
+
+gunzip GCF_002022765.2_C_virginica-3.0_gene_ontology.gaf.gz
+
+mv GCF_002022765.2_C_virginica-3.0_gene_ontology.gaf gene_ontology.gaf
+```
+
+Making a new .tab file with just the gene ID and GO IDs (3rd and 5th columns) renamed "gene_name" and "GeneOntologyIDs". The gene_name column will have one unique observation per row and all associated GO terms will be saved in the same row, with values separaetd by ;
+
+```{bash}
+awk 'NR>9 {print $3 "\t" $5}' gene_ontology.gaf | 
+sed '1i gene_name\tGeneOntologyIDs' | 
+sort | awk '
+NR==1 {print; next}
+$1!=prev {
+if (NR>2) print prev "\t" goids;
+prev=$1;
+goids=$2;
+next
+}
+{
+goids=goids "; " $2
+}
+END {print prev "\t" goids}
+' > gene2go_full.tab
+```
+
+Gene IDs for the candidate loci are saved to `Sig.gene.juv.CADO.LOC`
+
+I'm making another file with the gene IDs and GO IDs for the candidate loci:
+
+```{bash}
+grep -F -f Sig.gene.ROD.CADO.LOC gene2go_full.tab > ROD_cand_genes_GO.tab
+
+# Add header
+awk 'BEGIN {print "gene_name\tGeneOntologyIDs"} {print}' ROD_cand_genes_GO.tab > ROD_cand_genes_GO_head.tab
+```
+
+In R:
+
+```{r}
+#if (!require("BiocManager", quietly = TRUE))
+    #install.packages("BiocManager")
+
+#BiocManager::install("topGO")
+```
+
+```{r setup, include=FALSE}
+library(topGO)
+```
+
+Read in gene2go information 
+
+```{r}
+all_gene2go<-read.delim("gene2go_full.tab", sep="\t")
+out_gene2go<-read.delim("ROD_cand_genes_GO_head.tab", sep="\t")
+```
+
+Make list of genes for input to TopGO
+
+```{r}
+cand_genes <- as.character(unique(out_gene2go$gene_name))
+all_genes <- as.character(unique(all_gene2go$gene_name))
+out_GeneList <- factor(as.integer(all_genes %in% cand_genes))
+names(out_GeneList) <- all_genes
+```
+
+The following code will perform GO enrichment using the weighted Fisher's exact test  
+
+Read in gene-to-go-mappings
+```{r}
+gene2go_topgo <-readMappings("gene2go_full.tab", IDsep=";", sep="\t")
+```
+
+Set function to select genes of interest (ie those that have pvalue < 0.05)
+```{r}
+topDiffGenes <- function(allScore) {
+return(allScore < 0.05)}
+```
+
+### Biological Processes
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_OUT_BP_pi <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=out_GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r}
+GO_OUT_BP_FE_pi <- runTest(GO_OUT_BP_pi, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_OUT_BP_En_pi <- GenTable(GO_OUT_BP_pi, Fisher = GO_OUT_BP_FE_pi, orderBy = "Fisher",  topNodes = 100, numChar = 100)
+```
+Only taking the top 100 GO terms 
+
+Filter by significant results
+```{r}
+GO_OUT_BP_En_pi$Fisher<-as.numeric(GO_OUT_BP_En_pi$Fisher)
+GO_OUT_BP_En_sig_pi<-GO_OUT_BP_En_pi[GO_OUT_BP_En_pi$Fisher<0.05,]
+```
+
+Merge `GO_OUT_BP_En_sig_pi` with GO and gene info. 
+```{r}
+# Separate GO terms 
+out_gene2go <- out_gene2go %>%
+  separate_rows(GeneOntologyIDs, sep = ";")
+
+# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
+out_gene2go$GeneOntologyIDs <- trimws(out_gene2go$GeneOntologyIDs)
+GO_OUT_BP_En_sig_pi$GO.ID <- trimws(GO_OUT_BP_En_sig_pi$GO.ID)
+
+# Join the datasets based on GO term
+GO_OUT_BP_En_sig_gene_pi <- out_gene2go %>%
+  left_join(GO_OUT_BP_En_sig_pi, by = c("GeneOntologyIDs" = "GO.ID")) %>%
+  na.omit()
+
+# Add ontology column 
+GO_OUT_BP_En_sig_gene_pi$ontology <- "Biological Processes"
+```
+
+### Cellular Components
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_OUT_CC_pi <-new("topGOdata", ontology="CC", gene2GO=gene2go_topgo, allGenes=out_GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r}
+GO_OUT_CC_FE_pi <- runTest(GO_OUT_CC_pi, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_OUT_CC_En_pi <- GenTable(GO_OUT_CC_pi, Fisher = GO_OUT_CC_FE_pi, orderBy = "Fisher",  topNodes = 100, numChar = 100)
+```
+Only taking the top 100 GO terms 
+
+Filter by significant results
+```{r}
+GO_OUT_CC_En_pi$Fisher<-as.numeric(GO_OUT_CC_En_pi$Fisher)
+GO_OUT_CC_En_sig_pi<-GO_OUT_CC_En_pi[GO_OUT_CC_En_pi$Fisher<0.05,]
+```
+
+Merge `GO_OUT_CC_En_sig_pi` with GO and gene info. 
+```{r}
+# Separate GO terms 
+out_gene2go <- out_gene2go %>%
+  separate_rows(GeneOntologyIDs, sep = ";")
+
+# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
+out_gene2go$GeneOntologyIDs <- trimws(out_gene2go$GeneOntologyIDs)
+GO_OUT_CC_En_sig_pi$GO.ID <- trimws(GO_OUT_CC_En_sig_pi$GO.ID)
+
+# Join the datasets based on GO term
+GO_OUT_CC_En_sig_gene_pi <- out_gene2go %>%
+  left_join(GO_OUT_CC_En_sig_pi, by = c("GeneOntologyIDs" = "GO.ID")) %>%
+  na.omit()
+
+# Add ontology column 
+GO_OUT_CC_En_sig_gene_pi$ontology <- "Cellular Components"
+```
+
+### Molecular Functions
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_OUT_MF_pi <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=out_GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r}
+GO_OUT_MF_FE_pi <- runTest(GO_OUT_MF_pi, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_OUT_MF_En_pi <- GenTable(GO_OUT_MF_pi, Fisher = GO_OUT_MF_FE_pi, orderBy = "Fisher",  topNodes = 100, numChar = 100)
+```
+Only taking the top 100 GO terms 
+
+Filter by significant results
+```{r}
+GO_OUT_MF_En_pi$Fisher<-as.numeric(GO_OUT_MF_En_pi$Fisher)
+GO_OUT_MF_En_sig_pi<-GO_OUT_MF_En_pi[GO_OUT_MF_En_pi$Fisher<0.05,]
+```
+
+Merge `GO_OUT_MF_En_sig_pi` with GO and gene info. 
+```{r}
+# Separate GO terms 
+out_gene2go <- out_gene2go %>%
+  separate_rows(GeneOntologyIDs, sep = ";")
+
+# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
+out_gene2go$GeneOntologyIDs <- trimws(out_gene2go$GeneOntologyIDs)
+GO_OUT_MF_En_sig_pi$GO.ID <- trimws(GO_OUT_MF_En_sig_pi$GO.ID)
+
+# Join the datasets based on GO term
+GO_OUT_MF_En_sig_gene_pi <- out_gene2go %>%
+  left_join(GO_OUT_MF_En_sig_pi, by = c("GeneOntologyIDs" = "GO.ID")) %>%
+  na.omit()
+
+# Add ontology column 
+GO_OUT_MF_En_sig_gene_pi$ontology <- "Molecular Functions"
+```
+
+### Join ontologies
+
+Bind `GO_OUT_BP_En_sig_gene_pi`, `GO_OUT_CC_En_sig_gene_pi`, and `GO_OUT_MF_En_sig_gene_pi` to make a df that has significantly enriched GO terms for all ontologies 
+```{r}
+GO_OUT_En_sig_gene_pi <- rbind(GO_OUT_BP_En_sig_gene_pi, GO_OUT_CC_En_sig_gene_pi, GO_OUT_MF_En_sig_gene_pi)
+```
+
+Merge `pi_bed_filt` with `GO_OUT_En_sig_gene_pi` and calculate proportion of significant genes
+```{r}
+merged_out_genes <- GO_OUT_En_sig_gene_pi %>%
+  mutate(prop.sig.genes = Significant/Annotated)
+
+# saving unique instances of gene/GO pairs
+merged_out_genes <- unique(merged_out_genes)
+```
+
+```{r}
+# Write to csv 
+write.csv(merged_out_genes, "ROD_OUT_GO_en_sig_gene.csv")
+```
+
+Plot - need to work out 
+```{r}
+GO_plot_pi<-ggplot(merged_out_genes, aes(x = Term, y = -log(Fisher), size = prop.sig.genes, fill = -log(Fisher))) +
+  expand_limits(y = 1.5) +
+  ylim(1, 7.25) +
+  #Add horizontal lines with a single aesthetic value
+  geom_hline(yintercept = -log10(0.01), linetype = "longdash", colour = "black", linewidth = .6) +
+  geom_hline(yintercept = -log10(0.001), linetype = "solid", colour = "black", linewidth = .6) +
+  geom_point(shape = 21) + 
+  scale_size(range = c(2, 12)) + 
+  scale_fill_continuous(low = "#1AD3D1FF", high = "#4686FBFF") +
+  xlab('') + 
+  ylab('Enrichment score') +
+  #labs(caption = 'Cut-off lines at p=0.01 and p=0.001') +
+  theme_bw() +
+  facet_grid(vars(ontology), scales = "free", space = "free_y") +
+  coord_flip(); GO_plot_pi
+```
+
+
+
+
+
+
