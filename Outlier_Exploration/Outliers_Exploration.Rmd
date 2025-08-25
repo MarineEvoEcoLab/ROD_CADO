@@ -177,17 +177,53 @@ eigenvalues_C_ADD <- eigen(cov(pca_data_C_ADD[, c("PC1", "PC2")]))$values
 
 # Calculate proportion of variance explained
 pve_C_ADD <- eigenvalues_C_ADD / sum(eigenvalues_C_ADD) * 100
+```
 
+```{r}
 # Create the plot with proportion of variance on axes
-ggplot(pca_data_C_ADD, aes(x = PC1, y = PC2, color = Treatment)) +
+p <- ggplot(pca_data_C_ADD, aes(x = PC1, y = PC2, color = Treatment)) +
   geom_point() +
   stat_ellipse() +
-  theme_minimal() +
+  theme_bw() +
   scale_color_manual(values = custom_colors, labels = treatment_names) +
   xlab(paste0("PC1 (", round(pve_C_ADD[1], 2), "%)")) +
   ylab(paste0("PC2 (", round(pve_C_ADD[2], 2), "%)")) +
+  ggtitle("PCA Plot of LFMM SNPs with Treatment Groups") +
   annotate("text", x = -Inf, y = -Inf, 
            label = paste("PERMANOVA\n p =", format(p_value_C_ADD, digits = 2)),
            hjust = -0.1, vjust = -1)
+
+ggsave("pca_plot_LFMM_outliers.png", width = 8, height = 6, dpi = 300)
+```
+
+```{r}
+# Enhanced version with better formatting and options
+p <- ggplot(pca_data_C_ADD, aes(x = PC1, y = PC2, color = Treatment)) +
+  geom_point(size = 3, alpha = 0.7) +                    # Larger, semi-transparent points
+  stat_ellipse(level = 0.95, linetype = 2) +             # 95% confidence ellipses, dashed
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    panel.grid.minor = element_blank(),                   # Remove minor grid lines
+    plot.title = element_text(hjust = 0.5)               # Center title
+  ) +
+  scale_color_manual(
+    values = custom_colors, 
+    labels = treatment_names,
+    name = "Treatment"                                    # Legend title
+  ) +
+  xlab(paste0("PC1 (", round(pve_C_ADD[1], 1), "% variance explained)")) +
+  ylab(paste0("PC2 (", round(pve_C_ADD[2], 1), "% variance explained)")) +
+  ggtitle("PCA Plot with Treatment Groups") +
+  annotate("text", 
+           x = -Inf, y = -Inf,
+           label = paste0("PERMANOVA: p = ", 
+                         ifelse(p_value_C_ADD < 0.001, "< 0.001", 
+                                format(round(p_value_C_ADD, 3), nsmall = 3))),
+           hjust = -0.1, vjust = -1.5,
+           size = 3.5,
+           fontface = "italic")
+
+ggsave("pca_plot_LFMM_outliers.png", width = 8, height = 6, dpi = 300)
 ```
 
