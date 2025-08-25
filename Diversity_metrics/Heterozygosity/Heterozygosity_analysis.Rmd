@@ -126,6 +126,7 @@ cd /home/ccaillon/ROD_CADO_CC_working/treat_heterozygosity/mean_treat_het/
 
 #writing out tables in .txt files with headers
 
+# all treatments
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tTREAT") mean.CONCON.het mean.STRCON.het mean.CONROD.het mean.STRROD.het > mean.treatment.het
 
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") mean.CONCON.het > mean.CONCON.het.txt
@@ -133,10 +134,12 @@ cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") mean.STRCON.
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") mean.CONROD.het > mean.CONROD.het.txt
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") mean.STRROD.het > mean.STRROD.het.txt
 
-cd /home/ccaillon/ROD_CADO_CC_working/
+cd /home/ccaillon/ROD_CADO_CC_working/treat_heterozygosity/mean_treat_het/ 
 mkdir -p ./Output/Heterozygosity
-cp mean.treatment.het ./Output/Heterozygosity
+cp mean.treatment.het /home/ccaillon/ROD_CADO_CC_working/Output/Heterozygosity
 
+cd /home/ccaillon/ROD_CADO_CC_working/treat_heterozygosity/
+cp treatment.het /home/ccaillon/ROD_CADO_CC_working/Output/Heterozygosity
 ```
 
 ## Table
