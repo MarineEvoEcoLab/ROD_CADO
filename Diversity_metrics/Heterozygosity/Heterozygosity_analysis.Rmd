@@ -148,6 +148,11 @@ cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") treatment.he
 cat <(echo -e "CHROM\tBIN_START\tBIN_END\tEXP_HET\tOBS_HET\tGROUP") mean.treatment.het > mean.treatment.het.txt
 ```
 
+```{bash}
+cd /home/ccaillon/ROD_CADO_CC_working/Output/Heterozygosity/
+cp treatment.het.txt.gz /home/ccaillon/ROD_CADO/Diversity_metrics/Heterozygosity/
+```
+
 ## Table
 ```{r}
 setwd("~/ROD_CADO_CC_working/Output/Heterozygosity")
