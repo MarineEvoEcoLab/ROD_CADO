@@ -1,0 +1,1 @@
+../PCA_analysis/outlier_pcadapt_thinned_alpha01.loci.txt

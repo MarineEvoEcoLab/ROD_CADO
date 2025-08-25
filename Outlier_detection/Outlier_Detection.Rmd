@@ -2067,39 +2067,7 @@ Now, convert it to a bed file:
 awk '{print $1 "\t" $2-1 "\t" $2}' all_lfmm2_outliers | bedtools sort -i - > outliers_lfmm2.bed
 ```
 
-Looking at pcadapt and LFMM outliers
 
-```{bash}
-sort all_lfmm2_outliers > all_outliers_lfmm2_sorted.txt
-sort outlier_pcadapt_thinned_alpha01.loci.txt > all_outliers_pcadapt_sorted.txt
-```
-
-```{bash}
-comm -12 all_outliers_lfmm2_sorted.txt all_outliers_pcadapt_sorted.txt | wc -l
-```
-
-Three outliers directly shared. Going to look for one's that fall within 100 bp intervals.
-
-```{bash}
-awk '{print $1 "\t" $2-1 "\t" $2}' outlier_pcadapt_thinned_alpha01.loci.txt | bedtools sort -i - > outliers_pcadapt.bed
-```
-
-```{bash}
-bedtools slop -b 100 -i <(bedtools sort -i outliers_pcadapt.bed) -g reference.fasta.fai  | bedtools merge -i - >  outliers_pcadapt.loci.intervals.bed
-```
-
-```{bash}
-vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --recode --recode-INFO-all --positions all_lfmm2_outliers --out outliers_lfmm2
-```
-
-```{bash}
-vcftools --vcf outliers_lfmm2.recode.vcf --bed outliers_pcadapt.loci.intervals.bed --recode --recode-INFO-all --out ROD_lfmm_pcadapt_shared
-```
-
-Outputting VCF file...
-	Read 70497 BED file entries.
-After filtering, kept 13 out of a possible 115 Sites
-Run Time = 0.00 seconds
 
 
 

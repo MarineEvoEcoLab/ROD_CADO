@@ -1,0 +1,1 @@
+/home/Shared_Data/ROD_CADO/analysis/Outlier_Detection/outliers_lfmm2_DIS_098.loci.txt
