@@ -19,6 +19,19 @@ Bed file locations:
 [pcadapt](https://github.com/MarineEvoEcoLab/ROD_CADO/blob/main/PCA_analysis/outlier_pcadapt_thinned_alpha01.loci.txt)
 [OutFlank](https://github.com/MarineEvoEcoLab/ROD_CADO/blob/main/FST_Outflank.bed)
 
+Upload libraries
+
+```{r}
+library(vcfR)
+library(tibble)
+library(ggplot2)
+library(pcadapt)
+library(tidyverse)
+library(dplyr)
+library(qvalue)
+library(vcfR)
+```
+
 **Converting pcadapt txt file to bed format**
 
 ```{bash}
@@ -77,3 +90,58 @@ Five shared outlier SNPs between pcadapt and outflank.
 ```{bash}
 comm -12 outliers_pcadapt_sorted.txt outliers_outflank_sorted.txt
 ```
+
+## Convert Bed file using vcftools and the original VCF file
+
+```{bash}
+#ln -s /home/Shared_Data/ROD_CADO/analysis/raw.vcf/filtered/SNP.TRSdp10g1.FIL.vcf.gz .
+vcftools --gzvcf SNP.TRSdp10g1.FIL.vcf.gz --bed outliers_lfmm2.bed --recode --recode-INFO-all --out outliers_lfmm2.recode.bed
+```
+
+
+
+## PCA plot of LFMM outliers
+
+Load bed files into objects
+
+```{r}
+path_to_file <- "/home/jgreen/ROD_CADO/Outlier_Exploration/outliers_lfmm2.recode.bed.recode.vcf"
+lfmm_snps <- read.pcadapt(path_to_file, type = "vcf")
+```
+
+```{r}
+res_lfmm <- pcadapt(lfmm_snps, K = 5)
+plot(res_lfmm, option = "screeplot")
+```
+
+# Add popnames
+```{r}
+table <- read.table("/home/jgreen/ROD_CADO_working/Nucleotide_diversity/popmap_files/treat_popmap", header = FALSE)
+poplist.names <- table[,2]
+poplist.names
+
+plot(res_lfmm, option = "scores", pop = poplist.names)
+```
+
+# Analyze loadings
+```{r}
+par(mfrow = c(3, 2))
+for (i in 1:5)
+  plot(res_lfmm$loadings[, i], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+```
+
+# Investigate PC1, PC2, and PC3
+
+```{r}
+plot(res_lfmm$loadings[, 1], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+plot(res_lfmm$loadings[, 2], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+plot(res_lfmm$loadings[, 3], pch = 19, cex = .3, ylab = paste0("Loadings PC", i))
+```
+
+## Plot PCA
+
+```{r}
+plot(res_lfmm, option = "scores", pop = poplist.names)
+```
+
+
